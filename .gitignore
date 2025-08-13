@@ -1,0 +1,11 @@
+.idea/
+.env
+.redis_data/
+.postgres_data/
+.pgadmin_data/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+database/terms.json
