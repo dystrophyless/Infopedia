@@ -1,12 +1,9 @@
 import logging
 from typing import Any, Awaitable, Callable
-from psycopg import AsyncConnection
 
 from aiogram import BaseMiddleware
 from aiogram.fsm.context import FSMContext
 from aiogram.types import TelegramObject, User
-
-from database.db import get_user_language
 
 
 logger = logging.getLogger(__name__)
@@ -18,32 +15,42 @@ class TranslatorMiddleware(BaseMiddleware):
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
         data: dict[str, Any],
-                       ) -> Any:
+    ) -> Any:
+        logger.debug("Входим в TranslatorMiddleware")
+
         user: User = data.get("event_from_user")
 
         if user is None:
+            logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
         state: FSMContext = data.get("state")
-        user_context_data = await state.get_data()
 
-        if (user_language := user_context_data.get("user_language")) is None:
-            conn: AsyncConnection = data.get("conn")
+        if (user_language := await state.get_value("user_language")) is None:
+            user_row = await state.get_value("user_row")
 
-            if conn is None:
-                logger.error("Подключение к базе данных не было найдено в миддлварях")
-                raise RuntimeError("Отсутствует подключение к базе данных для определения языка пользователя")
+            if user_row is not None:
+                user_language = user_row[3]
+                logger.debug("Получили из базы данных следующий язык: %s", user_language)
+            else:
+                logger.debug("Данные о пользователе не удалось получить из базы данных")
 
-            user_language: str | None = await get_user_language(conn, user_id=user.id)
             if user_language is None:
+                logger.debug("Так-как язык не был найден ни в контексте, ни в базе данных, устанавливаем системный язык пользователя: %s", user.language_code)
                 user_language = user.language_code
 
         translations: dict = data.get("translations")
         i18n: dict = translations.get(user_language)
 
         if i18n is None:
+            logger.debug("Для языка пользователя не нашлось словаря, поэтому устанавливаем дефолтный язык: %s", translations["default"])
             data["i18n"] = translations[translations["default"]]
         else:
+            logger.debug("Устанавливаем следующий словарь языка: %s", user_language)
             data["i18n"] = i18n
 
-        return await handler(event, data)
+        result = await handler(event, data)
+
+        logger.debug("Выходим из TranslatorMiddleware")
+
+        return result
