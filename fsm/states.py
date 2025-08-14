@@ -1,7 +1,6 @@
 from aiogram.fsm.state import State, StatesGroup
 
 class FSMRegister(StatesGroup):
-    start_register = State()
     await_membership = State()
     choose_language = State()
     choose_grade = State()
