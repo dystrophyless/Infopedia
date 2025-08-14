@@ -4,10 +4,11 @@ from psycopg import AsyncConnection
 from aiogram import Router, Bot, F
 from aiogram.enums import BotCommandScopeType
 from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command, StateFilter, MagicData
 from aiogram.fsm.context import FSMContext
 
 from fsm.states import FSMRegister
+from enums.roles import UserRole
 from services.membership import is_user_followed
 from keyboards.inline_keyboards import build_channel_kb, build_language_kb, build_grade_kb
 from keyboards.menu_commands import get_main_menu_commands
@@ -18,12 +19,13 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(Command(commands=["start"]), StateFilter(FSMRegister.start_register))
+@router.message(Command(commands=["start"]), MagicData(F.start_registration))
 async def process_start_registration(
     message: Message,
     bot: Bot,
     state: FSMContext,
     channel_id: str,
+    channel_link: str,
     i18n: dict,
 ):
     await message.answer(text=i18n.get("/start"))
@@ -36,7 +38,7 @@ async def process_start_registration(
     else:
         await message.answer(
             text=i18n.get("await_membership"),
-            reply_markup=build_channel_kb(channel_id)
+            reply_markup=build_channel_kb(channel_link)
         )
         await state.set_state(FSMRegister.await_membership)
     logger.debug(f'Пользователь {message.from_user.username} начал проходить этап регистрации')
@@ -89,7 +91,7 @@ async def process_choosing_language(
     await state.update_data(user_language=callback.data)
 
     user_data = await state.get_data()
-    user_role = user_data.get("user_language")
+    user_role: UserRole = user_data.get("user_role")
 
     await bot.set_my_commands(
         commands=get_main_menu_commands(i18n=i18n, role=user_role),
@@ -142,5 +144,7 @@ async def process_choosing_grade(
 
 @router.message(StateFilter(FSMRegister.choose_grade))
 async def process_failed_to_choose_grade(message: Message):
-    await message.answer(text="Пожалуйста, выберите класс, в котором вы учитесь на данный момент.\n"
-                              "Для этого, нажмите соответствующую кнопку выше.")
+    await message.answer(
+        text="Пожалуйста, выберите класс, в котором вы учитесь на данный момент.\n"
+        "Для этого, нажмите соответствующую кнопку выше."
+    )
