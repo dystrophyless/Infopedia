@@ -106,22 +106,22 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
-        'middleware.shadow_ban': {
+        'middlewares.shadow_ban': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
         },
-        'middleware.statistics': {
+        'middlewares.statistics': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
         },
-        'middleware.language_settings': {
+        'middlewares.language_settings': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
         },
-        'middleware.i18n': {
+        'middlewares.i18n': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
