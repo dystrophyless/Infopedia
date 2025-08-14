@@ -79,6 +79,14 @@ async def process_save_click(
 
     user_role = await get_user_role(conn, user_id=callback.from_user.id)
 
+    await bot.set_my_commands(
+        commands=get_main_menu_commands(i18n=i18n, role=user_role),
+        scope=BotCommandScopeChat(
+            type=BotCommandScopeType.CHAT,
+            chat_id=callback.from_user.id
+        )
+    )
+
     await state.update_data(language_settings_msg_id=None, user_language=None)
     await state.set_state()
 
