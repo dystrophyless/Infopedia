@@ -68,13 +68,13 @@ async def get_user(
             query="""
                 SELECT
                     id,
+                    user_id,
                     username,
                     language,
                     grade,
                     role,
                     is_alive,
-                    banned,
-                    created_at
+                    banned
                 FROM users WHERE user_id=%(user_id)s;
             """,
             params={
@@ -238,7 +238,7 @@ async def get_user_banned_status_by_id(
     if row:
         logger.debug("У пользователя с `user_id`='%d' установлен следующий статус `banned`='%s'", user_id, row[0])
     else:
-        logger.warning("Не найден пользователь с `user_id`=%s в базе данных", user_id)
+        logger.warning("Не найден пользователь с `user_id`='%d' в базе данных", user_id)
     return row[0] if row else None
 
 
