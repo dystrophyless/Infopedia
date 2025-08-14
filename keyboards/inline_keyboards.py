@@ -128,7 +128,7 @@ def build_channel_kb(invite_url: str) -> InlineKeyboardMarkup:
                 ),
                 InlineKeyboardButton(
                     text='⏳ Проверить подписку',
-                    callback_data='check_channel_subscription'
+                    callback_data='check_membership'
                 )
             ]
         ]
