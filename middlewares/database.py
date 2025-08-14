@@ -13,9 +13,11 @@ class DatabaseMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
-        event: Update,
+        event: TelegramObject,
         data: dict[str, Any]
     ) -> Any:
+        logger.debug("Входим в DatabaseMiddleware")
+
         db_pool: AsyncConnectionPool = data.get("db_pool")
 
         if db_pool is None:
@@ -30,5 +32,7 @@ class DatabaseMiddleware(BaseMiddleware):
             except Exception as e:
                 logging.exception("Транзакция откатилась из-за следующей ошибки: %s", e)
                 raise
+
+        logger.debug("Выходим из DatabaseMiddleware")
 
         return result
