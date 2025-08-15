@@ -32,7 +32,7 @@ async def add_user(
                     %(role)s,
                     %(is_alive)s,
                     %(banned)s
-                      ) ON CONFLICT DO NOTHING;
+                ) ON CONFLICT DO NOTHING;
             """,
             params={
                 "user_id": user_id,
@@ -46,8 +46,8 @@ async def add_user(
         )
 
     logger.debug(
-        "Пользователь был добавлен в БД."
-        "Table=`%s`, user_id='%d', created_at='%s', language='%s', grade='%s', is_alive='%s', banned='%s'",
+        "Пользователь был добавлен в базу данных. "
+        "`user_id`='%d', `created_at`='%s', `language`='%s', `grade`='%s', `followed_after_bot`='%s', `is_alive`='%s',  `banned`='%s'",
         "users",
         user_id,
         datetime.now(timezone.utc),
