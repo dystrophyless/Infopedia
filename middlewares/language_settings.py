@@ -3,7 +3,7 @@ from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
 from aiogram.fsm.context import FSMContext
-from aiogram.types import TelegramObject, Update, User
+from aiogram.types import TelegramObject, User
 
 
 logger = logging.getLogger(__name__)
@@ -13,27 +13,34 @@ class LanguageSettingsMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
-        event: Update,
+        event: TelegramObject,
         data: dict[str, Any]
     ) -> Any:
+        logger.debug("Входим в LanguageSettingsMiddleware")
+
         user: User = data.get("event_from_user")
 
         if user is None:
+            logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
         if event.callback_query is None:
+            logger.warning("Данный апдейт не является типа callback_query, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
         locales: list[str] = data.get("locales")
 
         state: FSMContext = data.get("state")
-        user_context_data: dict = await state.get_data()
 
         if event.callback_query.data == "cancel_language_button_data":
-            user_context_data.update(user_language=None)
-            await state.set_data(user_context_data)
-        elif event.callback_query.data in locales and event.callback_query.data != user_context_data.get("user_language"):
-            user_context_data.update(user_language=event.callback_query.data)
-            await state.set_data(user_context_data)
+            logger.debug("Так как пользователь нажал отменить при выборе языка, устанавливаем `user_language`='None'")
+            await state.update_data(user_language=None)
+        elif event.callback_query.data in locales and event.callback_query.data != await state.get_value("user_language"):
+            logger.debug("Так как пользователь нажал на одну из кнопок с языком и нынешний язык пользователя не равен тому, что пользователь выбрал, устанавливаем `user_language`='%s' в данных состояний", event.callback_query.data)
+            await state.update_data(user_language=event.callback_query.data)
 
-        return await handler(event, data)
+        result = await handler(event, data)
+
+        logger.debug("Выходим из LanguageSettingsMiddleware")
+
+        return result
