@@ -90,8 +90,7 @@ async def process_choosing_language(
     await state.set_state(FSMRegister.choose_grade)
     await state.update_data(user_language=callback.data)
 
-    user_data = await state.get_data()
-    user_role: UserRole = user_data.get("user_role")
+    user_role: UserRole = await state.get_value("user_role")
 
     await bot.set_my_commands(
         commands=get_main_menu_commands(i18n=i18n, role=user_role),
@@ -117,13 +116,11 @@ async def process_choosing_grade(
     i18n: dict,
     conn: AsyncConnection
 ):
-    user_data = await state.get_data()
-
     user_id = callback.from_user.id
     username = f'{callback.from_user.username}' if callback.from_user.username else "undefined"
-    user_language = user_data.get("user_language")
+    user_language = await state.get_value("user_language")
     user_grade = callback.data[6:]
-    user_role = user_data.get("user_role")
+    user_role = await state.get_value("user_role")
 
     await add_user(
         conn,
@@ -143,8 +140,10 @@ async def process_choosing_grade(
 
 
 @router.message(StateFilter(FSMRegister.choose_grade))
-async def process_failed_to_choose_grade(message: Message):
+async def process_failed_to_choose_grade(
+    message: Message,
+    i18n: dict
+):
     await message.answer(
-        text="Пожалуйста, выберите класс, в котором вы учитесь на данный момент.\n"
-        "Для этого, нажмите соответствующую кнопку выше."
+        text=i18n.get("failed_to_choose_grade")
     )
