@@ -75,6 +75,7 @@ async def process_getting_term_info(
     await message.delete()
 
     if data is None:
+        logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.")
         return
 
     if data["action"] == "get_term_info":
