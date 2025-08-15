@@ -4,6 +4,7 @@ import logging.config
 import psycopg_pool
 import os
 import sys
+import io
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -28,6 +29,8 @@ from middlewares.i18n import TranslatorMiddleware
 from middlewares.shadow_ban import ShadowBanMiddleware
 from middlewares.statistics import ActivityCounterMiddleware
 
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, write_through=True)
 
 logger = logging.getLogger(__name__)
 
@@ -79,12 +82,11 @@ async def main() -> None:
     dp.update.outer_middleware(ThrottlingMiddleware())
     dp.update.outer_middleware(DatabaseMiddleware())
     dp.update.outer_middleware(RegistrationMiddleware())
-    dp.update.middleware(MembershipMiddleware())
-    dp.update.middleware(ShadowBanMiddleware())
-    dp.update.middleware(ActivityCounterMiddleware())
-    dp.update.middleware(LanguageSettingsMiddleware())
-    dp.update.middleware(TranslatorMiddleware())
-
+    dp.update.outer_middleware(MembershipMiddleware())
+    dp.update.outer_middleware(ShadowBanMiddleware())
+    dp.update.outer_middleware(ActivityCounterMiddleware())
+    dp.update.outer_middleware(LanguageSettingsMiddleware())
+    dp.update.outer_middleware(TranslatorMiddleware())
 
     dp['bot'] = bot
     dp['channel_id'] = config.bot.channel_id
@@ -115,3 +117,4 @@ if __name__ == '__main__':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     asyncio.run(main())
+
