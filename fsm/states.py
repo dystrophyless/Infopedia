@@ -6,8 +6,5 @@ class FSMRegister(StatesGroup):
     choose_grade = State()
     choose_update_on_news = State()
 
-class FSMMembership(StatesGroup):
-    await_membership = State()
-
 class FSMLanguage(StatesGroup):
     choose_language = State()
