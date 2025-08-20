@@ -29,10 +29,6 @@ RU: dict[str, str] = {
     "/unban_description": "Разбанить пользователя (требует user_id или username)",
     "/stats_description": "Посмотреть статистику активности пользователей",
 
-    "channel_subscription": "Для использования данной функции вы должны быть подписаны на наш Telegram-канал.",
-    "successful_channel_subcription": "✅ Вы прошли проверку на подписку!",
-    "unsuccessful_channel_subscription": "❌ Вы ещё не подписаны!",
-
     "grade_10": "10 класс",
     "grade_11": "11 класс",
     "grade_undefined": "Неизвестно",
@@ -47,7 +43,8 @@ RU: dict[str, str] = {
 
     "channel_membership": "Для того что бы пользоваться нашим ботом необходимо подписаться на наш Telegram-канал.\n\n"
                           "Подписываясь на нас, вы помогаете развивать наш проект.",
-
+    "successful_membership": "✅ Вы прошли проверку на подписку!",
+    "unsuccessful_membership": "❌ Вы ещё не подписаны!",
     "await_membership": "Перед тем, как начать пользоваться нашим ботом, вам необходимо подписаться на наш Telegram-канал.",
     "choose_language": "Выберите язык на котором бот будет отвечать вам",
     "failed_to_await_membership": "Пожалуйста, перейдите по кнопке <code>Подписаться</code> и подпишитесь на наш Telegram-канал.\n"
