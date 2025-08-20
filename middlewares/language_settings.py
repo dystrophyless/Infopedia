@@ -28,7 +28,7 @@ class LanguageSettingsMiddleware(BaseMiddleware):
             logger.warning("Данный апдейт не является типа callback_query, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
-        username = user.username if user.username else "Неизвестный"
+        username = user.username if user.username else user.first_name
 
         locales: list[str] = data.get("locales")
 

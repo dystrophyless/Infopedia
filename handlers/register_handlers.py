@@ -47,7 +47,7 @@ async def process_start_registration(
         await state.set_state(FSMRegister.await_membership)
         await state.update_data(await_membership_msg_id=msg.message_id)
 
-    username = f"{message.from_user.username}" if message.from_user.username else "Неизвестный"
+    username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug("Пользователь с `username`='%s' начал проходить этап регистрации", username)
 
 
@@ -59,7 +59,7 @@ async def process_channel_link_press(
     channel_id: str,
     i18n: dict
 ):
-    username = f"{callback.from_user.username}" if callback.from_user.username else "Неизвестный"
+    username = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
     logger.debug("Пользователь с `username`='%s' начал проходить этап подписки в регистрации", username)
 
     if await is_user_followed(bot, callback.from_user.id, channel_id):
@@ -162,7 +162,7 @@ async def process_choosing_grade(
     conn: AsyncConnection
 ):
     user_id = callback.from_user.id
-    username = f"{callback.from_user.username}" if callback.from_user.username else "undefined"
+    username = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
     user_language = await state.get_value("user_language")
     user_grade = callback.data[6:]
     user_role = await state.get_value("user_role")
