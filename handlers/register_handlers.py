@@ -1,10 +1,13 @@
 import logging
+from contextlib import suppress
+
 from psycopg import AsyncConnection
 
 from aiogram import Router, Bot, F
 from aiogram.enums import BotCommandScopeType
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
-from aiogram.filters import Command, StateFilter, MagicData
+from aiogram.filters import Command, StateFilter, MagicData, state
 from aiogram.fsm.context import FSMContext
 
 from fsm.states import FSMRegister
@@ -30,18 +33,22 @@ async def process_start_registration(
 ):
     await message.answer(text=i18n.get("/start"))
     if await is_user_followed(bot, message.from_user.id, channel_id):
-        await message.answer(
+        msg = await message.answer(
             text=i18n.get("choose_language"),
             reply_markup=build_language_kb()
         )
         await state.set_state(FSMRegister.choose_language)
+        await state.update_data(registration_msg_id=msg.message_id)
     else:
-        await message.answer(
+        msg = await message.answer(
             text=i18n.get("await_membership"),
             reply_markup=build_channel_kb(channel_link)
         )
         await state.set_state(FSMRegister.await_membership)
-    logger.debug(f'Пользователь {message.from_user.username} начал проходить этап регистрации')
+        await state.update_data(await_membership_msg_id=msg.message_id)
+
+    username = f"{message.from_user.username}" if message.from_user.username else "Неизвестный"
+    logger.debug("Пользователь с `username`='%s' начал проходить этап регистрации", username)
 
 
 @router.callback_query(F.data == "check_membership", StateFilter(FSMRegister.await_membership))
@@ -52,28 +59,51 @@ async def process_channel_link_press(
     channel_id: str,
     i18n: dict
 ):
-    if await is_user_followed(bot, callback.message.from_user.id, channel_id):
-        await callback.answer()
-        await callback.message.edit_text(text='✅ Вы прошли проверку на подписку!')
+    username = f"{callback.from_user.username}" if callback.from_user.username else "Неизвестный"
+    logger.debug("Пользователь с `username`='%s' начал проходить этап подписки в регистрации", username)
 
-        await callback.message.answer(
+    if await is_user_followed(bot, callback.from_user.id, channel_id):
+        logger.debug("Пользователь с `username`='%s' был подписан на наш канал, ожидаем выбор языка", username)
+        await callback.answer()
+        await callback.message.edit_text(text=i18n.get("successful_membership"))
+
+        msg_id = await callback.message.answer(
             text=i18n.get("choose_language"),
             reply_markup=build_language_kb()
         )
         await state.set_state(FSMRegister.choose_language)
+        await state.update_data(registration_msg_id=msg_id.message_id)
     else:
+        logger.debug("Пользователь с `username`='%s' не был подписан на наш канал, ожидем подписку", username)
         await callback.answer(
             text=i18n.get("unsuccessful_membership"),
             show_alert=True
         )
 
 
+
+
 @router.message(StateFilter(FSMRegister.await_membership))
 async def process_failed_to_channel_link_press(
     message: Message,
-    i18n: dict
+    bot: Bot,
+    i18n: dict,
+    channel_link: str,
+    state: FSMContext
 ):
-    await message.answer(text=i18n.get("failed_to_await_membership"))
+    user_id = message.from_user.id
+
+    with suppress(TelegramBadRequest):
+        msg_id = await state.get_value("await_membership_msg_id")
+        if msg_id:
+            await bot.delete_message(chat_id=user_id, message_id=msg_id)
+
+    msg = await message.answer(
+        text=i18n.get("await_membership"),
+        reply_markup=build_channel_kb(channel_link)
+    )
+
+    await state.update_data(await_membership_msg_id=msg.message_id)
 
 
 @router.callback_query(F.data.in_(["kz", "ru"]), StateFilter(FSMRegister.choose_language))
@@ -104,9 +134,24 @@ async def process_choosing_language(
 @router.message(StateFilter(FSMRegister.choose_language))
 async def process_failed_to_choose_language(
     message: Message,
-    i18n: dict
+    bot: Bot,
+    i18n: dict,
+    state: FSMContext
 ):
-    await message.answer(text=i18n.get("failed_to_choose_language"))
+    user_id = message.from_user.id
+
+    with suppress(TelegramBadRequest):
+        msg_id = await state.get_value("registration_msg_id")
+        if msg_id:
+            await bot.delete_message(chat_id=user_id, message_id=msg_id)
+
+    msg_id = await message.answer(
+        text=i18n.get("choose_language"),
+        reply_markup=build_language_kb()
+    )
+
+    await state.update_data(registration_msg_id=msg_id.message_id)
+
 
 
 @router.callback_query(F.data.in_(["grade_10", "grade_11", "grade_undefined"]), StateFilter(FSMRegister.choose_grade))
@@ -117,7 +162,7 @@ async def process_choosing_grade(
     conn: AsyncConnection
 ):
     user_id = callback.from_user.id
-    username = f'{callback.from_user.username}' if callback.from_user.username else "undefined"
+    username = f"{callback.from_user.username}" if callback.from_user.username else "undefined"
     user_language = await state.get_value("user_language")
     user_grade = callback.data[6:]
     user_role = await state.get_value("user_role")
@@ -142,8 +187,24 @@ async def process_choosing_grade(
 @router.message(StateFilter(FSMRegister.choose_grade))
 async def process_failed_to_choose_grade(
     message: Message,
-    i18n: dict
+    bot: Bot,
+    i18n: dict,
+    state: FSMContext
 ):
-    await message.answer(
-        text=i18n.get("failed_to_choose_grade")
+    user_id = message.from_user.id
+
+    with suppress(TelegramBadRequest):
+        msg_id = await state.get_value("registration_msg_id")
+        if msg_id:
+            await bot.delete_message(chat_id=user_id, message_id=msg_id)
+
+    user_language = await state.get_value("user_language")
+
+    msg_id = await message.answer(
+        text=i18n.get("choose_grade").format(i18n.get(user_language)),
+        reply_markup=build_grade_kb()
     )
+
+    await state.update_data(registration_msg_id=msg_id.message_id)
+
+
