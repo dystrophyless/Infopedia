@@ -26,7 +26,7 @@ class ActivityCounterMiddleware(BaseMiddleware):
             logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
-        username = user.username if user.username else "Неизвестный"
+        username = user.username if user.username else user.first_name
 
         result = await handler(event, data)
 

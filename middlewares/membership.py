@@ -26,7 +26,7 @@ class MembershipMiddleware(BaseMiddleware):
             return await handler(event, data)
 
 
-        username = user.username if user.username else "Неизвестный"
+        username = user.username if user.username else user.first_name
 
         bot = data.get("bot")
         channel_id = data.get("channel_id")

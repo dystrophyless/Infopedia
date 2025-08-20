@@ -20,7 +20,7 @@ async def process_start_command(
     i18n: dict
 ):
     await message.answer(text=i18n.get("/start"))
-    username = f"{message.from_user.username}" if message.from_user.username else "Неизвестный"
+    username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} начал чат с ботом")
 
 
@@ -30,7 +30,7 @@ async def process_help_command(
     i18n: dict
 ):
     await message.answer(text=i18n.get("/help"))
-    username = f"{message.from_user.username}" if message.from_user.username else "Неизвестный"
+    username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} прописал команду /help")
 
 
@@ -43,7 +43,7 @@ async def process_find_command(
         text=i18n.get("/find"),
         reply_markup=build_search_kb()
     )
-    username = f"{message.from_user.username}" if message.from_user.username else "Неизвестный"
+    username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} прописал команду /find")
 
 
@@ -58,7 +58,7 @@ async def process_definition_suggestion(
         text=i18n.get("suggest_new_definition").format(suggested_definition),
         reply_markup=build_suggestion_kb(suggested_definition)
     )
-    username = f"{message.from_user.username}" if message.from_user.username else "Неизвестный"
+    username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} прописал команду /help")
 
 
@@ -116,7 +116,7 @@ async def process_suggestion_positive_reply(
     i18n: dict
 ):
     suggested_definition = callback.data.split(":")[1]
-    username = f"{callback.from_user.username}" if callback.from_user.username else "Неизвестный"
+    username = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
 
     await callback.message.edit_text(
         text=i18n.get("suggestion_positive_reply")
