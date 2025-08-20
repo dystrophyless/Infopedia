@@ -5,7 +5,6 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, User
 from aiogram.fsm.context import FSMContext
 
-from fsm.states import FSMMembership
 from services.membership import is_user_followed
 
 logger = logging.getLogger(__name__)
@@ -26,23 +25,34 @@ class MembershipMiddleware(BaseMiddleware):
             logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
+
+        username = user.username if user.username else "Неизвестный"
+
         bot = data.get("bot")
         channel_id = data.get("channel_id")
         state: FSMContext = data.get("state")
 
         user_row = await state.get_value("user_row")
 
-        logger.debug("Строка о пользователе: %s", user_row)
+        logger.debug("Строка о пользователе с `username`='%s': %s", username, user_row)
 
         if user_row is None:
-            logger.debug("Данные о пользователе не удалось получить из базы данных, переходим в следующий \"обработчик\"")
+            logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"", username)
             return await handler(event, data)
 
         is_following = await is_user_followed(bot, user.id, channel_id)
 
+        await_membership = await state.get_value("await_membership")
+
         if not is_following:
-            logger.debug("Пользователь был не подписан, устанавливаем состояние ожидания подписки, переходим в следующий \"обработчик\"")
-            await state.set_state(FSMMembership.await_membership)
+            logger.debug("Пользователь с `username`='%s' был не подписан, устанавливаем состояние ожидания подписки, переходим в следующий \"обработчик\"", username)
+            if await_membership:
+                data["await_membership"] = True
+            else:
+                data["await_membership"] = None
+        else:
+            logger.debug("Пользователь с `username`='%s' был подписан, переходим в следующий \"обработчик\"", username)
+
 
         result = await handler(event, data)
 
