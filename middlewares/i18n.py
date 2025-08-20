@@ -24,6 +24,8 @@ class TranslatorMiddleware(BaseMiddleware):
             logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
+        username = user.username if user.username else "Неизвестный"
+
         state: FSMContext = data.get("state")
 
         if (user_language := await state.get_value("user_language")) is None:
@@ -31,22 +33,22 @@ class TranslatorMiddleware(BaseMiddleware):
 
             if user_row is not None:
                 user_language = user_row[3]
-                logger.debug("Получили из базы данных следующий язык: %s", user_language)
+                logger.debug("Получили из базы данных от пользователя с `username`='%s' следующий язык: %s", username, user_language)
             else:
-                logger.debug("Данные о пользователе не удалось получить из базы данных")
+                logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных", username)
 
             if user_language is None:
-                logger.debug("Так-как язык не был найден ни в контексте, ни в базе данных, устанавливаем системный язык пользователя: %s", user.language_code)
+                logger.debug("Так-как язык не был найден ни в контексте, ни в базе данных, устанавливаем пользователю с `username`='%s' его системный язык : %s", username, user.language_code)
                 user_language = user.language_code
 
         translations: dict = data.get("translations")
         i18n: dict = translations.get(user_language)
 
         if i18n is None:
-            logger.debug("Для языка пользователя не нашлось словаря, поэтому устанавливаем дефолтный язык: %s", translations["default"])
+            logger.debug("Для языка пользователя с `username`='%s' не нашлось словаря, поэтому устанавливаем дефолтный язык: %s", username, translations["default"])
             data["i18n"] = translations[translations["default"]]
         else:
-            logger.debug("Устанавливаем следующий словарь языка: %s", user_language)
+            logger.debug("Устанавливаем следующий словарь языка пользователю с `username`='%s': %s", username, user_language)
             data["i18n"] = i18n
 
         result = await handler(event, data)
