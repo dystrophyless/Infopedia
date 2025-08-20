@@ -30,11 +30,11 @@ async def process_any_message_when_language(
     state: FSMContext
 ):
     user_id = message.from_user.id
-    data = await state.get_data()
-    user_language = data.get("user_language")
+
+    user_language = await state.get_value("user_language")
 
     with suppress(TelegramBadRequest):
-        msg_id = data.get("language_settings_msg_id")
+        msg_id = await state.get_value("language_settings_msg_id")
         if msg_id:
             await bot.delete_message(chat_id=user_id, message_id=msg_id)
 
