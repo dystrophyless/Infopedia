@@ -26,19 +26,21 @@ class ActivityCounterMiddleware(BaseMiddleware):
             logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
+        username = user.username if user.username else "Неизвестный"
+
         result = await handler(event, data)
 
         state: FSMContext = data.get("state")
 
         user_row = await state.get_value("user_row")
 
-        logger.debug("Строка о пользователе: %s", user_row)
+        logger.debug("Строка о пользователе с `username`='%s': %s", username, user_row)
 
         if user_row is None:
-            logger.debug("Данные о пользователе не удалось получить из базы данных, переходим в следующий \"обработчик\"")
+            logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"", username)
             return result
 
-        logger.debug("Добавляем активность пользователя в БД")
+        logger.debug("Добавляем активность пользователя с `username`='%s' в БД", username)
 
         conn: AsyncConnection = data.get("conn")
 

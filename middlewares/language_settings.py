@@ -28,15 +28,17 @@ class LanguageSettingsMiddleware(BaseMiddleware):
             logger.warning("Данный апдейт не является типа callback_query, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
+        username = user.username if user.username else "Неизвестный"
+
         locales: list[str] = data.get("locales")
 
         state: FSMContext = data.get("state")
 
         if event.callback_query.data == "cancel_language_button_data":
-            logger.debug("Так как пользователь нажал отменить при выборе языка, устанавливаем `user_language`='None'")
+            logger.debug("Так как пользователь с `username`='%s' нажал отменить при выборе языка, устанавливаем `user_language`='None'", username)
             await state.update_data(user_language=None)
         elif event.callback_query.data in locales and event.callback_query.data != await state.get_value("user_language"):
-            logger.debug("Так как пользователь нажал на одну из кнопок с языком и нынешний язык пользователя не равен тому, что пользователь выбрал, устанавливаем `user_language`='%s' в данных состояний", event.callback_query.data)
+            logger.debug("Так как пользователь с `username`='%s' нажал на одну из кнопок с языком и нынешний язык пользователя не равен тому, что пользователь выбрал, устанавливаем `user_language`='%s' в данных состояний", username, event.callback_query.data)
             await state.update_data(user_language=event.callback_query.data)
 
         result = await handler(event, data)
