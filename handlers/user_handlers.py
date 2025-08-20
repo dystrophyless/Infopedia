@@ -123,11 +123,11 @@ async def process_suggestion_positive_reply(
     )
     await bot.send_message(
         chat_id=group_id,
-        text=f'📄 Было предложено добавить новый термин: <b>{suggested_definition}</b>\n\n'
-             f'👤 От пользователя: <a href="tg://user?id={callback.from_user.id}">{username}</a>',
+        text=f"📄 Было предложено добавить новый термин: <b>{suggested_definition}</b>\n\n"
+             f"👤 От пользователя: <a href=\"tg://user?id={callback.from_user.id}\">{username}</a>",
         reply_markup=build_suggestion_decision_kb(callback.from_user.id)
     )
-    logger.debug(f"Пользователь {username} предложил следующий термин: {suggested_definition}")
+    logger.debug("Пользователь с `username`='%s' предложил следующий термин: %s", username, suggested_definition)
 
 
 @router.callback_query(F.data == "suggestion_negative_reply")
