@@ -29,6 +29,19 @@ RU: dict[str, str] = {
     "/unban_description": "Разбанить пользователя (требует user_id или username)",
     "/stats_description": "Посмотреть статистику активности пользователей",
 
+    "empty_ban_answer": "❗ Пожалуйста, укажите ID пользователя или @username.",
+    "incorrect_ban_arg": "⚠️ <b>Неверный формат.</b>\n\nИспользуйте: /ban <code>ID</code> "
+                         "или /ban <code>@username</code>",
+    "already_banned": "❗ Пользователь и так уже забанен!",
+    "successfully_banned": "⚠️ Пользователь успешно забанен!",
+    "no_user": "❗ Нет такого пользователя в базе данных!",
+    "empty_unban_answer": "❗ Пожалуйста, укажите ID пользователя или @username.",
+    "incorrect_unban_arg": "⚠️ <b>Неверный формат.</b>\n\nИспользуйте: /unban <code>ID</code> "
+                           "или /unban <code>@username</code>",
+    "not_banned": "❗ Пользователь и так не был забанен!",
+    "successfully_unbanned": "⚠️ Пользователь успешно разбанен!",
+    "stats": "📊 <b>Статистика по действиям пользователей:</b>\n\n{}",
+
     "grade_10": "10 класс",
     "grade_11": "11 класс",
     "grade_undefined": "Неизвестно",

@@ -28,6 +28,19 @@ KZ: dict[str, str] = {
     "/unban_description": "Пайдаланушыдан бұғатты алып тастау (user_id немесе username қажет етеді)",
     "/stats_description": "Пайдаланушылардың әрекеттер статистикасын қарау",
 
+    "empty_ban_answer": "❗ Пайдаланушының ID немесе @username енгізіңіз.",
+    "incorrect_ban_arg": "⚠️ <b>Бұрыс формат.</b>\n\nКелесі түрде қолданыңыз: /ban <code>ID</code> "
+                         "немесе /ban <code>@username</code>",
+    "already_banned": "❗ Пайдаланушы әлбетте бұғатталған!",
+    "successfully_banned": "⚠️ Пайдаланушы сәтті бұғатталды!",
+    "no_user": "❗ Деректер қорында мұндай пайдаланушы жоқ!",
+    "empty_unban_answer": "❗ Пайдаланушының ID немесе @username енгізіңіз.",
+    "incorrect_unban_arg": "⚠️ <b>Бұрыс формат.</b>\n\nКелесі түрде қолданыңыз: /unban <code>ID</code> "
+                           "немесе /unban <code>@username</code>",
+    "not_banned": "❗ Пайдаланушы әлбетте бұғатталмаған!",
+    "successfully_unbanned": "⚠️ Пайдаланушыдан бұғат сәтті түрде алынды!",
+    "stats": "📊 <b>Пайдаланушылардың әрекеттер статистикасы:</b>\n\n{}",
+
     "channel_subscription": "Бұл функцияны қолдану үшін сіз біздің Telegram-арнамызға тіркелу керексіз.",
     "successful_channel_subcription": "✅ Сіз тіркелуге байланысты тексеруден сәтті өттіңіз!",
     "unsuccessful_channel_subscription": "❌ Сіз әлі тіркелмедіңіз!",
