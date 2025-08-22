@@ -1,8 +1,11 @@
 import logging
-from datetime import datetime, timezone
-from typing import Any
-from psycopg import AsyncConnection
 
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert
+
+from database.models import Users, Activity
 from enums.roles import UserRole
 
 
@@ -10,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def add_user(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     user_id: int,
     username: str | None = None,
@@ -20,307 +23,247 @@ async def add_user(
     is_alive: bool = True,
     banned: bool = False
 ) -> None:
-    async with conn.cursor() as cursor:
-        await cursor.execute(
-            query="""
-                INSERT INTO users(user_id, username, language, grade, role, is_alive, banned)
-                VALUES(
-                    %(user_id)s,
-                    %(username)s,
-                    %(language)s,
-                    %(grade)s,
-                    %(role)s,
-                    %(is_alive)s,
-                    %(banned)s
-                ) ON CONFLICT DO NOTHING;
-            """,
-            params={
-                "user_id": user_id,
-                "username": username,
-                "language": language,
-                "grade": grade,
-                "role": role,
-                "is_alive": is_alive,
-                "banned": banned,
-            }
-        )
-
-    logger.debug(
-        "Пользователь был добавлен в базу данных. "
-        "`user_id`='%d', `created_at`='%s', `language`='%s', `grade`='%s', `followed_after_bot`='%s', `is_alive`='%s',  `banned`='%s'",
-        user_id,
-        datetime.now(timezone.utc),
-        language,
-        grade,
-        is_alive,
-        banned
+    new_user = Users(
+        user_id=user_id,
+        username=username,
+        language=language,
+        grade=grade,
+        role=role,
+        is_alive=is_alive,
+        banned=banned,
     )
+    session.add(new_user)
+
+    try:
+        await session.commit()
+        logger.debug(
+            "Пользователь был добавлен в базу данных."
+            "user_id='%d', `language`='%s', `grade`='%s', `role`='%s', `is_alive`='%s', `banned`='%s'",
+            user_id,
+            language,
+            grade,
+            role,
+            is_alive,
+            banned
+        )
+    except IntegrityError:
+        await session.rollback()
+        logger.debug("Пользователь с `user_id`='%s' уже существует", user_id)
 
 
 async def get_user(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     user_id: int
-) -> tuple[Any, ...] | None:
-    async with conn.cursor() as cursor:
-        data = await cursor.execute(
-            query="""
-                SELECT
-                    id,
-                    user_id,
-                    username,
-                    language,
-                    grade,
-                    role,
-                    is_alive,
-                    banned
-                FROM users WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "user_id": user_id,
-            }
-        )
-        row = await data.fetchone()
-    logger.debug("Строка: '%s'", row)
-    return row if row else None
+) -> Users | None:
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    return user
 
 
 async def change_user_alive_status(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     is_alive: bool,
     user_id: int
 ) -> None:
-    async with conn.cursor() as cursor:
-        await cursor.execute(
-            query="""
-                UPDATE users
-                SET is_alive=%(is_alive)s
-                WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "is_alive": is_alive,
-                "user_id": user_id
-            }
-        )
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return
+
+    user.is_alive = is_alive
+
     logger.debug("Обновлён статус `is_alive` на '%s' для пользователя с `user_id`='%d'", is_alive, user_id)
 
 
 async def change_user_banned_status_by_id(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     banned: bool,
     user_id: int
 ) -> None:
-    async with conn.cursor() as cursor:
-        await cursor.execute(
-            query="""
-                UPDATE users
-                SET banned=%(banned)s
-                WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "banned": banned,
-                "user_id": user_id
-            }
-        )
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return
+
+    user.banned = banned
+
     logger.debug("Обновлён статус `banned` на '%s' для пользователя с `user_id`='%d'", banned, user_id)
 
 
 async def change_user_banned_status_by_username(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     banned: bool,
     username: str
 ) -> None:
-    async with conn.cursor() as cursor:
-        await cursor.execute(
-            query="""
-                UPDATE users
-                SET banned=%(banned)s
-                WHERE username=%(username)s;
-            """,
-            params={
-                "banned": banned,
-                "username": username
-            }
-        )
+    result = await session.execute(select(Users).filter_by(username=username))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `username`='%s' из базы данных", username)
+        return
+
+    user.banned = banned
+
     logger.debug("Обновлён статус `banned` на '%s' для пользователя с `username`='%s'", banned, username)
 
 
 async def update_user_language(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     language: str,
     user_id: int
 ) -> None:
-    async with conn.cursor() as cursor:
-        await cursor.execute(
-            query="""
-                UPDATE users
-                SET language=%(language)s
-                WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "language": language,
-                "user_id": user_id
-            }
-        )
+    result = await session.execute(select(Users).filter_by(language=language))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return
+
+    user.language = language
+
     logger.debug("Язык `language`='%s' был установлен для пользователя с `user_id`='%d'", language, user_id)
 
 
 async def get_user_language(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     user_id: int
 ) -> str | None:
-    async with conn.cursor() as cursor:
-        data = await cursor.execute(
-            query="""
-                SELECT language
-                FROM users
-                WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "user_id": user_id
-            }
-        )
-        row = await data.fetchone()
-    if row:
-        logger.debug("У пользователя с `user_id`='%d' установлен следующий язык `language`='%s'", user_id, row[0])
-    else:
-        logger.warning("Не найден пользователь с `user_id`='%d' в базе данных", user_id)
-    return row[0] if row else None
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return None
+
+    language: str = user.language
+
+    logger.debug("У пользователя с `user_id`='%d' установлен следующий язык `language`='%s'", user_id, language)
+
+    return language
 
 
 async def get_user_alive_status(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     user_id: int
 ) -> bool | None:
-    async with conn.cursor() as cursor:
-        data = await cursor.execute(
-            query="""
-                SELECT is_alive
-                FROM users
-                WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "user_id": user_id
-            }
-        )
-        row = await data.fetchone()
-    if row:
-        logger.debug("У пользователя с `user_id`='%d' установлен следующий статус `is_alive`='%s'", user_id, row[0])
-    else:
-        logger.warning("Не найден пользователь с `user_id`=%s в базе данных", user_id)
-    return row[0] if row else None
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return None
+
+    is_alive: bool = user.is_alive
+
+    logger.debug("У пользователя с `user_id`='%d' установлен следующий статус `is_alive`='%s'", user_id, is_alive)
+
+    return is_alive
 
 
 async def get_user_banned_status_by_id(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     user_id: int
 ) -> bool | None:
-    async with conn.cursor() as cursor:
-        data = await cursor.execute(
-            query="""
-                SELECT banned
-                FROM users
-                WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "user_id": user_id
-            }
-        )
-        row = await data.fetchone()
-    if row:
-        logger.debug("У пользователя с `user_id`='%d' установлен следующий статус `banned`='%s'", user_id, row[0])
-    else:
-        logger.warning("Не найден пользователь с `user_id`='%d' в базе данных", user_id)
-    return row[0] if row else None
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return None
+
+    banned: bool = user.banned
+
+    logger.debug("У пользователя с `user_id`='%d' установлен следующий статус `banned`='%s'", user_id, banned)
+
+    return banned
 
 
 async def get_user_banned_status_by_username(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     username: str
 ) -> bool | None:
-    async with conn.cursor() as cursor:
-        data = await cursor.execute(
-            query="""
-                SELECT banned
-                FROM users
-                WHERE username=%(username)s;
-            """,
-            params={
-                "username": username
-            }
-        )
-        row = await data.fetchone()
-    if row:
-        logger.debug("У пользователя с `username`='%s' установлен следующий статус `banned`='%s'", username, row[0])
-    else:
-        logger.warning("Не найден пользователь с `username`='%s' в базе данных", username)
-    return row[0] if row else None
+    result = await session.execute(select(Users).filter_by(username=username))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `username`='%s' из базы данных", username)
+        return None
+
+
+    banned: bool = user.banned
+
+    logger.debug("У пользователя с `username`='%s' установлен следующий статус `banned`='%s'", username, banned)
+
+    return banned
 
 
 async def get_user_role(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     user_id: int
 ) -> UserRole | None:
-    async with conn.cursor() as cursor:
-        data = await cursor.execute(
-            query="""
-                SELECT role
-                FROM users
-                WHERE user_id=%(user_id)s;
-            """,
-            params={
-                "user_id": user_id
-            }
-        )
-        row = await data.fetchone()
-    if row:
-        logger.debug("У пользователя с `user_id`='%s' установлена следующая роль: %s", user_id, row[0])
-    else:
-        logger.warning("Не найден пользователь с `user_id`=%s в базе данных", user_id)
-    return UserRole(row[0]) if row else None
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return None
+
+    role: str = user.role
+
+    logger.debug("У пользователя с `user_id`='%s' установлена следующая роль: %s", user_id, role)
+
+    return UserRole(role)
 
 
 async def add_user_activity(
-    conn: AsyncConnection,
+    session: AsyncSession,
     *,
     user_id: int
 ) -> None:
-    async with conn.cursor() as cursor:
-        await cursor.execute(
-            query="""
-                INSERT INTO activity (user_id)
-                VALUES (%(user_id)s)
-                ON CONFLICT (user_id, activity_date)
-                DO UPDATE
-                SET actions = activity.actions + 1;
-            """,
-            params={
-                "user_id": user_id
-            }
-        )
+    stmt = insert(Activity).values(user_id=user_id).on_conflict_do_update(
+        index_elements=["user_id", "activity_date"],
+        set_={"actions": Activity.actions + 1}
+    )
+    await session.execute(stmt)
     logger.debug("Активность пользователя с `user_id`='%d' была обновлена в таблице `activity`", user_id)
 
 
-async def get_statistics(conn: AsyncConnection) -> list[Any, ...] | None:
-    async with conn.cursor() as cursor:
-        data = await cursor.execute(
-            query="""
-                SELECT user_id, SUM(actions) AS total_actions
-                FROM activity
-                GROUP BY user_id
-                ORDER BY total_actions DESC
-                LIMIT 5;
-            """
-        )
-        rows = await data.fetchall()
+async def get_statistics(session: AsyncSession) -> list[tuple[int, int]] | None:
+    query = (
+        select(Activity.user_id, func.sum(Activity.actions).label("total_actions"))
+        .group_by(Activity.user_id)
+        .order_by(func.sum(Activity.actions).desc())
+        .limit(5)
+    )
+
+    result = await session.execute(query)
+
+    rows = result.all()
+
     logger.debug("Была получена статистика активности пользователей с таблицы `activity`")
     return [*rows] if rows else None
