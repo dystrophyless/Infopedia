@@ -6,6 +6,7 @@ from aiogram.types import TelegramObject, User
 from aiogram.fsm.context import FSMContext
 
 from services.membership import is_user_followed
+from database.models import Users
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,11 @@ class MembershipMiddleware(BaseMiddleware):
         channel_id = data.get("channel_id")
         state: FSMContext = data.get("state")
 
-        user_row = await state.get_value("user_row")
+        db_user: Users = data.get("db_user")
 
-        logger.debug("Строка о пользователе с `username`='%s': %s", username, user_row)
 
-        if user_row is None:
+
+        if db_user is None:
             logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"", username)
             return await handler(event, data)
 
@@ -45,7 +46,9 @@ class MembershipMiddleware(BaseMiddleware):
         await_membership = await state.get_value("await_membership")
 
         if not is_following:
-            logger.debug("Пользователь с `username`='%s' был не подписан, устанавливаем состояние ожидания подписки, переходим в следующий \"обработчик\"", username)
+            logger.debug(
+                "Пользователь с `username`='%s' был не подписан, устанавливаем состояние ожидания подписки, переходим в следующий \"обработчик\"",
+                username)
             if await_membership:
                 data["await_membership"] = True
             else:

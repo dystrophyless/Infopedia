@@ -3,8 +3,8 @@ from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, User
-from aiogram.fsm.context import FSMContext
 
+from database.models import Users
 
 logger = logging.getLogger(__name__)
 
@@ -26,18 +26,20 @@ class ShadowBanMiddleware(BaseMiddleware):
 
         username = user.username if user.username else user.first_name
 
-        state: FSMContext = data.get("state")
+        db_user: Users = data.get("db_user")
 
-        user_row = await state.get_value("user_row")
 
-        if user_row is None:
+
+        if db_user is None:
             logger.debug("Данные о пользователе с с `username`='%s' не удалось получить из базы данных", username)
             return await handler(event, data)
 
-        user_banned_status = user_row[7]
+        user_banned_status: bool = db_user.banned
 
         if user_banned_status:
-            logger.warning("Забаненный пользователь с `username`='%s', `user_id`='%d' попытался взаимодействовать с ботом, игнорируем апдейт", username, user.id)
+            logger.warning(
+                "Забаненный пользователь с `username`='%s', `user_id`='%d' попытался взаимодействовать с ботом, игнорируем апдейт",
+                username, user.id)
             if event.callback_query:
                 await event.callback_query.answer()
             return
