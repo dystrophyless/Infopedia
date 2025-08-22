@@ -1,14 +1,14 @@
 import logging
 from typing import Any, Awaitable, Callable
-from psycopg import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, User
 from aiogram.fsm.context import FSMContext
 
-from fsm.states import FSMRegister
 from enums.roles import UserRole
 from database.db import get_user
+from database.models import Users
 
 logger = logging.getLogger(__name__)
 
@@ -27,21 +27,19 @@ class RegistrationMiddleware(BaseMiddleware):
             logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
-        conn: AsyncConnection = data.get("conn")
+        session: AsyncSession = data.get("session")
 
-        if conn is None:
+        if session is None:
             logger.error("Соединение с базой данных не было найдено в данных мидлвари")
-            raise RuntimeError("Отстуствует соединение с базой данных для проверки теневого бана")
+            raise RuntimeError("Отсутствует соединение с базой данных для проверки зарегистрирован ли пользователь")
 
         username = user.username if user.username else user.first_name
 
-        user_row = await get_user(conn, user_id=user.id)
-
-        logger.debug("Строка о пользователе с `username`='%s': %s", username, user_row)
+        db_user: Users = await get_user(session, user_id=user.id)
 
         state: FSMContext = data.get("state")
 
-        if user_row is None:
+        if db_user is None:
             logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, определяем роль пользователя, передаём в контекст, устанавливаем состояние регистрации, переходим в следующий \"обработчик\"", username)
 
             admin_ids: list[int] = data.get("admin_ids")
@@ -56,9 +54,21 @@ class RegistrationMiddleware(BaseMiddleware):
 
             data["start_registration"] = True
         else:
+            logger.debug(
+                "Строка о пользователе с `username`='%s':"
+                "user_id='%d', `language`='%s', `grade`='%s', `role`='%s', `is_alive`='%s', `banned`='%s'",
+                username,
+                db_user.user_id,
+                db_user.language,
+                db_user.grade,
+                db_user.role,
+                db_user.is_alive,
+                db_user.banned
+            )
+
             data["start_registration"] = None
 
-        await state.update_data(user_row=user_row)
+        data["db_user"] = db_user
 
         result = await handler(event, data)
 

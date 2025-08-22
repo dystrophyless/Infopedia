@@ -5,6 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.fsm.context import FSMContext
 from aiogram.types import TelegramObject, User
 
+from database.models import Users
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,10 @@ class TranslatorMiddleware(BaseMiddleware):
         state: FSMContext = data.get("state")
 
         if (user_language := await state.get_value("user_language")) is None:
-            user_row = await state.get_value("user_row")
+            db_user: Users = data.get("db_user")
 
-            if user_row is not None:
-                user_language = user_row[3]
+            if db_user is not None:
+                user_language = db_user.language
                 logger.debug("Получили из базы данных от пользователя с `username`='%s' следующий язык: %s", username, user_language)
             else:
                 logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных", username)

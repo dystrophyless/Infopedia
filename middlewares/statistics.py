@@ -1,13 +1,14 @@
 import logging
 from typing import Any, Awaitable, Callable
 
-from aiogram.fsm.context import FSMContext
-from psycopg import AsyncConnection
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, User
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from database.db import add_user_activity
+from database.models import Users
 
 logger = logging.getLogger(__name__)
 
@@ -30,25 +31,21 @@ class ActivityCounterMiddleware(BaseMiddleware):
 
         result = await handler(event, data)
 
-        state: FSMContext = data.get("state")
+        db_user: Users = data.get("db_user")
 
-        user_row = await state.get_value("user_row")
-
-        logger.debug("Строка о пользователе с `username`='%s': %s", username, user_row)
-
-        if user_row is None:
+        if db_user is None:
             logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"", username)
             return result
 
         logger.debug("Добавляем активность пользователя с `username`='%s' в БД", username)
 
-        conn: AsyncConnection = data.get("conn")
+        session: AsyncSession = data.get("session")
 
-        if conn is None:
+        if session is None:
             logger.error("Соединение с базой данных не было найдено в данных мидлвари")
-            raise RuntimeError("Отстуствует соединение с базой данных для проверки теневого бана")
+            raise RuntimeError("Отсутствует соединение с базой данных для того что бы считать активность")
 
-        await add_user_activity(conn, user_id=user.id)
+        await add_user_activity(session, user_id=user.id)
 
         logger.debug("Выходим из ShadowBanMiddleware")
 
