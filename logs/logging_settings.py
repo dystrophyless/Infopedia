@@ -1,7 +1,5 @@
 import sys
 
-from logs.log_filters import ErrorLogFilter, CriticalLogFilter
-
 logging_config = {
     'version': 1,
     'disable_existing_loggers': True,
@@ -11,33 +9,11 @@ logging_config = {
             'style': '{'
         }
     },
-    'filters': {
-        'error_filter': {
-            '()': ErrorLogFilter
-        },
-        'critical_filter': {
-            '()': CriticalLogFilter
-        }
-    },
     'handlers': {
         'default': {
             'class': 'logging.StreamHandler',
             'formatter': 'default',
             'stream': sys.stdout
-        },
-        'error_file': {
-            'class': 'logging.FileHandler',
-            'filename': 'error.log',
-            'mode': 'w',
-            'formatter': 'default',
-            'filters': ['error_filter']
-        },
-        'critical_file': {
-            'class': 'logging.FileHandler',
-            'filename': 'critical.log',
-            'mode': 'w',
-            'formatter': 'default',
-            'filters': ['critical_filter']
         },
     },
     'loggers': {
@@ -77,6 +53,11 @@ logging_config = {
             'propagate': False
         },
         'database.connection': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'database.create_tables': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
