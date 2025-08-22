@@ -1,9 +1,11 @@
 import logging
 from typing import Any, Awaitable, Callable
-from psycopg_pool import AsyncConnectionPool
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Update
+from aiogram.types import TelegramObject
+
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+
 
 
 logger = logging.getLogger(__name__)
@@ -18,19 +20,19 @@ class DatabaseMiddleware(BaseMiddleware):
     ) -> Any:
         logger.debug("Входим в DatabaseMiddleware")
 
-        db_pool: AsyncConnectionPool = data.get("db_pool")
+        sessionmaker: async_sessionmaker[AsyncSession] = data.get("sessionmaker")
 
-        if db_pool is None:
+        if sessionmaker is None:
             logging.error("Пул соединений не был предоставлен в данных мидлвари")
-            raise RuntimeError("Отсутствует `db_pool` в контексте мидлвари")
+            raise RuntimeError("Отсутствует `sessionmaker` в контексте мидлвари")
 
-        async with db_pool.connection() as connection:
+        async with sessionmaker() as session:
             try:
-                async with connection.transaction():
-                    data["conn"] = connection
+                async with session.begin():
+                    data["session"] = session
                     result = await handler(event, data)
             except Exception as e:
-                logging.exception("Транзакция откатилась из-за следующей ошибки: %s", e)
+                logger.exception("Транзакция откатилась из-за ошибки: %s", e)
                 raise
 
         logger.debug("Выходим из DatabaseMiddleware")
