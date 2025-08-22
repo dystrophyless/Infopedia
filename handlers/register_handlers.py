@@ -1,14 +1,14 @@
 import logging
 from contextlib import suppress
 
-from psycopg import AsyncConnection
-
 from aiogram import Router, Bot, F
 from aiogram.enums import BotCommandScopeType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
 from aiogram.filters import Command, StateFilter, MagicData, state
 from aiogram.fsm.context import FSMContext
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fsm.states import FSMRegister
 from enums.roles import UserRole
@@ -159,7 +159,7 @@ async def process_choosing_grade(
     callback: CallbackQuery,
     state: FSMContext,
     i18n: dict,
-    conn: AsyncConnection
+    session: AsyncSession
 ):
     user_id = callback.from_user.id
     username = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
@@ -168,7 +168,7 @@ async def process_choosing_grade(
     user_role = await state.get_value("user_role")
 
     await add_user(
-        conn,
+        session,
         user_id=user_id,
         username=username,
         language=user_language,

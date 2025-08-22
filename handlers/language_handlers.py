@@ -1,6 +1,5 @@
 import logging
 from contextlib import suppress
-from psycopg import AsyncConnection
 
 from aiogram import Bot, F, Router
 from aiogram.enums import BotCommandScopeType
@@ -8,6 +7,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, BotCommandScopeChat
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from filters.filters import LocaleFilter
 from keyboards.inline_keyboards import build_language_settings_kb
@@ -52,10 +52,10 @@ async def process_language_command(
     i18n: dict,
     locales: list[str],
     state: FSMContext,
-    conn: AsyncConnection,
+    session: AsyncSession
 ):
     await state.set_state(FSMLanguage.choose_language)
-    user_language = await get_user_language(conn, user_id=message.from_user.id)
+    user_language = await get_user_language(session, user_id=message.from_user.id)
 
     msg = await message.answer(
         text=i18n.get("/language"),
@@ -71,13 +71,13 @@ async def process_save_click(
     bot: Bot,
     i18n: dict,
     state: FSMContext,
-    conn: AsyncConnection
+    session: AsyncSession
 ):
     data = await state.get_data()
-    await update_user_language(conn, language=data.get("user_language"), user_id=callback.from_user.id)
+    await update_user_language(session, language=data.get("user_language"), user_id=callback.from_user.id)
     await callback.message.edit_text(text=i18n.get("language_saved").format(i18n.get(data.get("user_language"))))
 
-    user_role = await get_user_role(conn, user_id=callback.from_user.id)
+    user_role = await get_user_role(session, user_id=callback.from_user.id)
 
     await bot.set_my_commands(
         commands=get_main_menu_commands(i18n=i18n, role=user_role),
@@ -96,9 +96,9 @@ async def process_cancel_click(
     callback: CallbackQuery,
     i18n: dict,
     state: FSMContext,
-    conn: AsyncConnection
+    session: AsyncSession
 ):
-    user_language = await get_user_language(conn, user_id=callback.from_user.id)
+    user_language = await get_user_language(session, user_id=callback.from_user.id)
     await callback.message.edit_text(text=i18n.get("language_cancelled").format(i18n.get(user_language)))
     await state.update_data(language_settings_msg_id=None, user_language=None)
     await state.set_state()
