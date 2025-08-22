@@ -1,4 +1,5 @@
 import logging
+import html
 
 from aiogram import Router, Bot, F
 from aiogram.types import Message, CallbackQuery
@@ -90,8 +91,8 @@ async def process_getting_term_info(
 
         first_source_entry = first_source_entries[0]
 
-        definition = first_source_entry["definition"]
-        topic = first_source_entry["topic"]
+        definition = html.escape(first_source_entry["definition"])
+        topic = html.escape(first_source_entry["topic"])
         page = first_source_entry["page"]
 
         await message.answer(
@@ -159,8 +160,8 @@ async def process_source_change(
 
     first_entry = entries[0]
 
-    definition = first_entry["definition"]
-    topic = first_entry["topic"]
+    definition = html.escape(first_entry["definition"])
+    topic = html.escape(first_entry["topic"])
     page = first_entry["page"]
 
     await callback.message.edit_text(
@@ -195,8 +196,8 @@ async def process_definition_change(
 
     first_entry = entries[index]
 
-    definition = first_entry["definition"]
-    topic = first_entry["topic"]
+    definition = html.escape(first_entry["definition"])
+    topic = html.escape(first_entry["topic"])
     page = first_entry["page"]
 
     await callback.message.edit_text(

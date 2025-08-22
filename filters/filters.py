@@ -1,6 +1,7 @@
 from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery, Message
-from psycopg import AsyncConnection
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from enums.roles import UserRole
 from database.db import get_user_role
@@ -28,12 +29,12 @@ class UserRoleFilter(BaseFilter):
         if not self.roles:
             raise ValueError("No valid roles provided to `UserRoleFilter`.")
 
-    async def __call__(self, event: Message | CallbackQuery, conn: AsyncConnection) -> bool:
+    async def __call__(self, event: Message | CallbackQuery, session: AsyncSession) -> bool:
         user = event.from_user
         if not user:
             return False
 
-        role = await get_user_role(conn, user_id=user.id)
+        role = await get_user_role(session, user_id=user.id)
         if role is None:
             return False
 

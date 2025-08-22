@@ -1,11 +1,11 @@
 import logging
-from psycopg import AsyncConnection
 
 from aiogram import Router, Bot, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, CommandObject, StateFilter
-from aiogram.fsm.state import default_state
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from enums.roles import UserRole
 from filters.filters import UserRoleFilter
@@ -30,10 +30,10 @@ async def process_admin_help_command(
 @router.message(Command(commands=["stats"]))
 async def process_admin_statistics_command(
     message: Message,
-    conn: AsyncConnection,
+    session: AsyncSession,
     i18n: dict
 ):
-    statistics = await get_statistics(conn)
+    statistics = await get_statistics(session)
     await message.answer(
         text=i18n.get("stats").format(
             "\n".join(
@@ -48,7 +48,7 @@ async def process_admin_statistics_command(
 async def process_admin_ban_command(
     message: Message,
     command: CommandObject,
-    conn: AsyncConnection,
+    session: AsyncSession,
     i18n: dict
 ):
     args = command.args
@@ -60,9 +60,9 @@ async def process_admin_ban_command(
     arg_user = args.split()[0].strip()
 
     if arg_user.isdigit():
-        banned_status = await get_user_banned_status_by_id(conn, user_id=int(arg_user))
+        banned_status = await get_user_banned_status_by_id(session, user_id=int(arg_user))
     elif arg_user.startswith("@"):
-        banned_status = await get_user_banned_status_by_username(conn, username=arg_user[1:])
+        banned_status = await get_user_banned_status_by_username(session, username=arg_user[1:])
     else:
         await message.reply(text=i18n.get("incorrect_ban_argument"))
         return
@@ -73,9 +73,9 @@ async def process_admin_ban_command(
         await message.reply(i18n.get("already_banned"))
     else:
         if arg_user.isdigit():
-            await change_user_banned_status_by_id(conn, user_id=int(arg_user), banned=True)
+            await change_user_banned_status_by_id(session, user_id=int(arg_user), banned=True)
         else:
-            await change_user_banned_status_by_username(conn, username=arg_user[1:], banned=True)
+            await change_user_banned_status_by_username(session, username=arg_user[1:], banned=True)
 
         await message.reply(text=i18n.get("successfully_banned"))
 
@@ -84,7 +84,7 @@ async def process_admin_ban_command(
 async def process_admin_unban_command(
     message: Message,
     command: CommandObject,
-    conn: AsyncConnection,
+    session: AsyncSession,
     i18n: dict
 ):
     args = command.args
@@ -96,9 +96,9 @@ async def process_admin_unban_command(
     arg_user = args.split()[0].strip()
 
     if arg_user.isdigit():
-        banned_status = await get_user_banned_status_by_id(conn, user_id=int(arg_user))
+        banned_status = await get_user_banned_status_by_id(session, user_id=int(arg_user))
     elif arg_user.startswith("@"):
-        banned_status = await get_user_banned_status_by_username(conn, username=arg_user[1:])
+        banned_status = await get_user_banned_status_by_username(session, username=arg_user[1:])
     else:
         await message.reply(text=i18n.get("incorrect_unban_argument"))
         return
@@ -107,9 +107,9 @@ async def process_admin_unban_command(
         await message.reply(i18n.get("no_user"))
     elif banned_status:
         if arg_user.isdigit():
-            await change_user_banned_status_by_id(conn, user_id=int(arg_user), banned=False)
+            await change_user_banned_status_by_id(session, user_id=int(arg_user), banned=False)
         else:
-            await change_user_banned_status_by_username(conn, username=arg_user[1:], banned=False)
+            await change_user_banned_status_by_username(session, username=arg_user[1:], banned=False)
 
         await message.reply(text=i18n.get("successfully_unbanned"))
     else:
