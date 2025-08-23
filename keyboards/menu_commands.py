@@ -6,49 +6,49 @@ def get_main_menu_commands(i18n: dict[str, str], role: UserRole):
         return [
             BotCommand(
                 command="/start",
-                description=i18n.get('/start_description')
+                description=i18n.get("/start_description")
             ),
             BotCommand(
                 command="/help",
-                description=i18n.get('/help_description')
-            ),
-            BotCommand(
-                command="/language",
-                description=i18n.get('/language_description')
+                description=i18n.get("/help_description")
             ),
             BotCommand(
                 command="/find",
-                description=i18n.get('/find_description')
+                description=i18n.get("/find_description")
+            ),
+            BotCommand(
+                command="/language",
+                description=i18n.get("/language_description")
             )
         ]
     elif role == UserRole.ADMIN:
         return [
             BotCommand(
                 command="/start",
-                description=i18n.get('/start_description')
+                description=i18n.get("/start_description")
             ),
             BotCommand(
                 command="/help",
-                description=i18n.get('/help_description')
-            ),
-            BotCommand(
-                command="/language",
-                description=i18n.get('/language_description')
+                description=i18n.get("/help_description")
             ),
             BotCommand(
                 command="/find",
-                description=i18n.get('/find_description')
+                description=i18n.get("/find_description")
+            ),
+            BotCommand(
+                command="/language",
+                description=i18n.get("/language_description")
             ),
             BotCommand(
                 command="/ban",
-                description=i18n.get('/ban_description')
+                description=i18n.get("/ban_description")
             ),
             BotCommand(
                 command="/unban",
-                description=i18n.get('/unban_description')
+                description=i18n.get("/unban_description")
             ),
             BotCommand(
                 command="/stats",
-                description=i18n.get('/stats_description')
+                description=i18n.get("/stats_description")
             )
         ]
