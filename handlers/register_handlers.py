@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from contextlib import suppress
 
 from aiogram import Router, Bot, F
@@ -31,7 +32,6 @@ async def process_start_registration(
     channel_link: str,
     i18n: dict,
 ):
-    await message.answer(text=i18n.get("/start"))
     if await is_user_followed(bot, message.from_user.id, channel_id):
         msg = await message.answer(
             text=i18n.get("choose_language"),
@@ -182,6 +182,14 @@ async def process_choosing_grade(
 
     await state.update_data(user_role=None, user_language=None)
     await state.set_state()
+
+    await asyncio.sleep(3)
+
+    await callback.message.delete()
+
+    await callback.message.answer(text=i18n.get("thanks_for_registration"))
+
+
 
 
 @router.message(StateFilter(FSMRegister.choose_grade))
