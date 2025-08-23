@@ -126,7 +126,7 @@ async def update_user_language(
     language: str,
     user_id: int
 ) -> None:
-    result = await session.execute(select(Users).filter_by(language=language))
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
 
     user = result.scalar_one_or_none()
 
