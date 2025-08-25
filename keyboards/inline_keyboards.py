@@ -2,20 +2,20 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from utils.callback_factories import SourceCallback, TermCallback
+from enums.grades import UserGrade
 
 
-
-def build_language_kb() -> InlineKeyboardMarkup:
+def build_language_kb(i18n: dict) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='🇰🇿 Казахский',
-                    callback_data='kz'
+                    text=i18n.get("kz"),
+                    callback_data="kz"
                 ),
                 InlineKeyboardButton(
-                    text='🇷🇺 Русский',
-                    callback_data='ru'
+                    text=i18n.get("ru"),
+                    callback_data="ru"
                 )
             ]
         ]
@@ -28,7 +28,6 @@ def build_language_settings_kb(i18n: dict, locales: list[str], checked: str) -> 
         if locale == "default":
             continue
         if locale == checked:
-            #print(i18n.get(locale))
             buttons.append(
                 [
                     InlineKeyboardButton(
@@ -38,7 +37,6 @@ def build_language_settings_kb(i18n: dict, locales: list[str], checked: str) -> 
                 ]
             )
         else:
-            #print(i18n.get(locale))
             buttons.append(
                 [
                     InlineKeyboardButton(
@@ -62,129 +60,100 @@ def build_language_settings_kb(i18n: dict, locales: list[str], checked: str) -> 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def build_grade_kb() -> InlineKeyboardMarkup:
+def build_grade_kb(i18n: dict) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='11 класс',
-                    callback_data='grade_11'
+                    text=i18n.get(UserGrade.GRADE_11),
+                    callback_data=UserGrade.GRADE_11
                 ),
                 InlineKeyboardButton(
-                    text='10 класс',
-                    callback_data='grade_10'
+                    text=i18n.get(UserGrade.GRADE_10),
+                    callback_data=UserGrade.GRADE_10
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text='🤷🏻 Без понятия',
-                    callback_data='grade_undefined'
+                    text=i18n.get(UserGrade.GRADE_IDK),
+                    callback_data=UserGrade.GRADE_UNDEFINED
                 )
             ]
         ]
     )
 
 
-def build_update_kb() -> InlineKeyboardMarkup:
+def build_channel_kb(i18n: dict, invite_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='🔔 Да, получать новости',
-                    callback_data='get_updated_on_news'
-                ),
-                InlineKeyboardButton(
-                    text='🔕 Нет, не нужно',
-                    callback_data='do_not_get_updated_on_news'
-                )
-            ]
-        ]
-    )
-
-
-def build_menu_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text='👤 Профиль',
-                    callback_data='profile_menu'
-                ),
-                InlineKeyboardButton(
-                    text='🏠 Главная',
-                    callback_data='main_menu'
-                )
-            ]
-        ]
-    )
-
-def build_channel_kb(invite_url: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text='🔔 Подписаться',
+                    text=i18n.get("follow_button"),
                     url=invite_url,
                 ),
                 InlineKeyboardButton(
-                    text='⏳ Проверить подписку',
-                    callback_data='check_membership'
+                    text=i18n.get("check_membership_button"),
+                    callback_data="check_membership"
                 )
             ]
         ]
     )
 
-def build_search_kb() -> InlineKeyboardMarkup:
+
+def build_search_kb(i18n: dict) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='🔍 Поиск термина',
-                    switch_inline_query_current_chat=''
+                    text=i18n.get("search_button"),
+                    switch_inline_query_current_chat=""
                 )
             ]
         ]
     )
 
-def build_suggestion_kb(suggested_definition: str) -> InlineKeyboardMarkup:
+
+def build_suggestion_kb(i18n: dict, suggested_definition: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='✅ Да, хочу',
-                    callback_data=f'suggestion_positive_reply:{suggested_definition}'
+                    text=i18n.get("suggestion_positive_reply_button"),
+                    callback_data=f"suggestion_positive_reply:{suggested_definition}"
                 ),
                 InlineKeyboardButton(
-                    text='❌ Нет, не хочу',
-                    callback_data='suggestion_negative_reply'
+                    text=i18n.get("suggestion_negative_reply_button"),
+                    callback_data="suggestion_negative_reply"
                 )
             ]
         ]
     )
+
 
 def build_suggestion_decision_kb(user_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='✅ Принять',
-                    callback_data='add_new_definition'
+                    text="✅ Принять",
+                    callback_data="add_new_definition"
                 ),
                 InlineKeyboardButton(
-                    text='❌ Отклонить',
-                    callback_data='delete'
+                    text="❌ Отклонить",
+                    callback_data="deny_new_definition"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text='⛔ Заблокировать пользователя',
-                    callback_data=f'ban_user:{user_id}'
+                    text="⛔ Заблокировать пользователя",
+                    callback_data=f"ban_user:{user_id}"
                 )
             ]
         ]
     )
 
-def build_sources_kb(term: str, terms: dict, term_names_to_ids: dict[str, int], source_names_to_ids: dict[str, int], current_source_name: str = 'Алматыкітап: 7-сынып', current_index: int = 0) -> InlineKeyboardMarkup:
+
+def build_sources_kb(term: str, terms: dict, term_names_to_ids: dict[str, int], source_names_to_ids: dict[str, int], current_source_name: str = "Алматыкітап: 7-сынып", current_index: int = 0) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
 
     sources = terms[term]
@@ -200,13 +169,11 @@ def build_sources_kb(term: str, terms: dict, term_names_to_ids: dict[str, int], 
         source_id = source_names_to_ids[source_name]
 
         if source_name == current_source_name:
-            # Текущий выбранный источник — пассивная кнопка
             kb_builder.button(
                 text=f"✅ {source_name}",
                 callback_data="noop"
             )
         else:
-            # Остальные — активные кнопки
             kb_builder.button(
                 text=source_name,
                 callback_data=SourceCallback(term=term_id, source=source_id).pack()
@@ -228,7 +195,7 @@ def build_sources_kb(term: str, terms: dict, term_names_to_ids: dict[str, int], 
         nav_row.append(
             InlineKeyboardButton(
                 text=f"{current_index + 1}/{total_indexes}",
-                callback_data="noop"  # или заглушка, чтоб ничего не делал
+                callback_data="noop"
             )
         )
 
