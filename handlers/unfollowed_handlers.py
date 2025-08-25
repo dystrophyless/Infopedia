@@ -24,7 +24,7 @@ async def process_any_message(
 ):
     await message.answer(
         text=i18n.get("channel_membership"),
-        reply_markup = build_channel_kb(channel_link)
+        reply_markup = build_channel_kb(i18n, channel_link)
     )
 
     await state.set_state(FSMMembership.await_membership)
