@@ -12,14 +12,6 @@ def get_main_menu_commands(i18n: dict[str, str], role: UserRole):
                 command="/help",
                 description=i18n.get("/help_description")
             ),
-            BotCommand(
-                command="/find",
-                description=i18n.get("/find_description")
-            ),
-            BotCommand(
-                command="/language",
-                description=i18n.get("/language_description")
-            )
         ]
     elif role == UserRole.ADMIN:
         return [
@@ -30,14 +22,6 @@ def get_main_menu_commands(i18n: dict[str, str], role: UserRole):
             BotCommand(
                 command="/help",
                 description=i18n.get("/help_description")
-            ),
-            BotCommand(
-                command="/find",
-                description=i18n.get("/find_description")
-            ),
-            BotCommand(
-                command="/language",
-                description=i18n.get("/language_description")
             ),
             BotCommand(
                 command="/ban",
