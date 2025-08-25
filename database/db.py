@@ -2,11 +2,12 @@ import logging
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from database.models import Users, Activity
 from enums.roles import UserRole
+from enums.grades import UserGrade
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ async def add_user(
     user_id: int,
     username: str | None = None,
     language: str = "ru",
-    grade: str = "undefined",
+    grade: UserGrade = UserGrade.GRADE_UNDEFINED,
     role: UserRole = UserRole.USER,
     is_alive: bool = True,
     banned: bool = False
@@ -240,6 +241,25 @@ async def get_user_role(
     return UserRole(role)
 
 
+async def get_user_grade(
+    session: AsyncSession,
+    *,
+    user_id: int
+) -> UserGrade | None:
+    result = await session.execute(select(Users).filter_by(user_id=user_id))
+
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return None
+
+    grade: str = user.grade
+
+    logger.debug("У пользователя с `user_id`='%s' установлена следующий класс: %s", user_id, grade)
+
+    return UserGrade(grade)
+
 async def add_user_activity(
     session: AsyncSession,
     *,
@@ -267,3 +287,17 @@ async def get_statistics(session: AsyncSession) -> list[tuple[int, int]] | None:
 
     logger.debug("Была получена статистика активности пользователей с таблицы `activity`")
     return [*rows] if rows else None
+
+
+async def get_total_users(sessionmaker: async_sessionmaker[AsyncSession]) -> int | None:
+    async with sessionmaker() as session:
+        try:
+            async with session.begin():
+                result = await session.execute(select(func.count(Users.id)))
+
+                total_users_count: int = result.scalar_one_or_none()
+
+                return total_users_count
+        except Exception as e:
+            logger.exception("Транзакция откатилась из-за ошибки: %s", e)
+            raise
