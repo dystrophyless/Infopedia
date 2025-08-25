@@ -52,6 +52,11 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
+        'handlers.menu_handlers': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
         'database.connection': {
             'level': 'DEBUG',
             'handlers': ['default'],
