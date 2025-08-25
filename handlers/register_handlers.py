@@ -6,15 +6,17 @@ from aiogram import Router, Bot, F
 from aiogram.enums import BotCommandScopeType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
-from aiogram.filters import Command, StateFilter, MagicData, state
+from aiogram.filters import Command, StateFilter, MagicData
 from aiogram.fsm.context import FSMContext
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fsm.states import FSMRegister
 from enums.roles import UserRole
+from enums.grades import UserGrade
 from services.membership import is_user_followed
 from keyboards.inline_keyboards import build_channel_kb, build_language_kb, build_grade_kb
+from keyboards.main_menu import build_menu_kb
 from keyboards.menu_commands import get_main_menu_commands
 from database.db import add_user
 
@@ -35,14 +37,14 @@ async def process_start_registration(
     if await is_user_followed(bot, message.from_user.id, channel_id):
         msg = await message.answer(
             text=i18n.get("choose_language"),
-            reply_markup=build_language_kb()
+            reply_markup=build_language_kb(i18n)
         )
         await state.set_state(FSMRegister.choose_language)
         await state.update_data(registration_msg_id=msg.message_id)
     else:
         msg = await message.answer(
             text=i18n.get("await_membership"),
-            reply_markup=build_channel_kb(channel_link)
+            reply_markup=build_channel_kb(i18n, channel_link)
         )
         await state.set_state(FSMRegister.await_membership)
         await state.update_data(await_membership_msg_id=msg.message_id)
@@ -69,7 +71,7 @@ async def process_channel_link_press(
 
         msg_id = await callback.message.answer(
             text=i18n.get("choose_language"),
-            reply_markup=build_language_kb()
+            reply_markup=build_language_kb(i18n)
         )
         await state.set_state(FSMRegister.choose_language)
         await state.update_data(registration_msg_id=msg_id.message_id)
@@ -100,7 +102,7 @@ async def process_failed_to_channel_link_press(
 
     msg = await message.answer(
         text=i18n.get("await_membership"),
-        reply_markup=build_channel_kb(channel_link)
+        reply_markup=build_channel_kb(i18n, channel_link)
     )
 
     await state.update_data(await_membership_msg_id=msg.message_id)
@@ -115,7 +117,7 @@ async def process_choosing_language(
 ):
     await callback.message.edit_text(
         text=i18n.get("choose_grade").format(i18n.get(callback.data)),
-        reply_markup=build_grade_kb()
+        reply_markup=build_grade_kb(i18n)
     )
     await state.set_state(FSMRegister.choose_grade)
     await state.update_data(user_language=callback.data)
@@ -147,14 +149,14 @@ async def process_failed_to_choose_language(
 
     msg_id = await message.answer(
         text=i18n.get("choose_language"),
-        reply_markup=build_language_kb()
+        reply_markup=build_language_kb(i18n)
     )
 
     await state.update_data(registration_msg_id=msg_id.message_id)
 
 
 
-@router.callback_query(F.data.in_(["grade_10", "grade_11", "grade_undefined"]), StateFilter(FSMRegister.choose_grade))
+@router.callback_query(F.data.in_([UserGrade.GRADE_11, UserGrade.GRADE_10, UserGrade.GRADE_UNDEFINED]), StateFilter(FSMRegister.choose_grade))
 async def process_choosing_grade(
     callback: CallbackQuery,
     state: FSMContext,
@@ -164,7 +166,7 @@ async def process_choosing_grade(
     user_id = callback.from_user.id
     username = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
     user_language = await state.get_value("user_language")
-    user_grade = callback.data[6:]
+    user_grade = UserGrade(callback.data)
     user_role = await state.get_value("user_role")
 
     await add_user(
@@ -187,7 +189,12 @@ async def process_choosing_grade(
 
     await callback.message.delete()
 
-    await callback.message.answer(text=i18n.get("thanks_for_registration"))
+    msg_id = await callback.message.answer(
+        text=i18n.get("thanks_for_registration"),
+        reply_markup=build_menu_kb(i18n)
+    )
+
+    await state.update_data(registration_msg_id=msg_id.message_id)
 
 
 
@@ -210,7 +217,7 @@ async def process_failed_to_choose_grade(
 
     msg_id = await message.answer(
         text=i18n.get("choose_grade").format(i18n.get(user_language)),
-        reply_markup=build_grade_kb()
+        reply_markup=build_grade_kb(i18n)
     )
 
     await state.update_data(registration_msg_id=msg_id.message_id)
