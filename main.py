@@ -15,9 +15,10 @@ from redis.asyncio import Redis
 from logs.logging_settings import logging_config
 from config_data.config import Config, load_config
 from services.data import load_terms, load_indexed_terms, generate_id_maps
-from handlers import register_handlers, language_handlers, user_handlers, admin_handlers, inline_handlers
+from handlers import register_handlers, language_handlers, user_handlers, admin_handlers, inline_handlers, menu_handlers
 from i18n.translator import get_translations
 from database.connection import get_async_engine, get_sessionmaker
+from database.db import get_total_users
 
 from middlewares.throttler import ThrottlingMiddleware
 from middlewares.database import DatabaseMiddleware
@@ -57,7 +58,10 @@ async def main() -> None:
 
     bot = Bot(
         token=config.bot.token,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.HTML,
+            link_preview_is_disabled=True
+        )
     )
     dp = Dispatcher(storage=storage)
 
@@ -71,6 +75,8 @@ async def main() -> None:
 
     sessionmaker = get_sessionmaker(engine)
 
+    total_users_count: int = await get_total_users(sessionmaker)
+
     translations = get_translations()
     locales = list(translations.keys())
 
@@ -79,6 +85,7 @@ async def main() -> None:
     dp.include_router(inline_handlers.router)
     dp.include_router(admin_handlers.router)
     dp.include_router(user_handlers.router)
+    dp.include_router(menu_handlers.router)
 
     dp.update.outer_middleware(ThrottlingMiddleware())
     dp.update.outer_middleware(DatabaseMiddleware())
@@ -100,6 +107,7 @@ async def main() -> None:
     dp["term_names_to_ids"] = term_names_to_ids
     dp["source_ids"] = source_ids
     dp["source_names_to_ids"] = source_names_to_ids
+    dp["total_users_count"] = total_users_count
     dp["sessionmaker"] = sessionmaker
     dp["translations"] = translations
     dp["locales"] = locales
