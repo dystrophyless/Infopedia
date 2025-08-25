@@ -6,9 +6,13 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.state import default_state
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from keyboards.inline_keyboards import build_search_kb, build_suggestion_kb, build_suggestion_decision_kb, build_sources_kb
+from keyboards.main_menu import build_main_menu_kb
 from services.signature import verify_payload
 from utils.callback_factories import SourceCallback, TermCallback
+from database.db import get_user_role
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +22,17 @@ router = Router()
 @router.message(Command(commands=["start"]), StateFilter(default_state))
 async def process_start_command(
     message: Message,
-    i18n: dict
+    i18n: dict,
+    total_users_count: int,
+    session: AsyncSession
 ):
-    await message.answer(text=i18n.get("/start"))
+    user_role: str = await get_user_role(session, user_id=message.from_user.id)
+
+    await message.answer(
+        text=i18n.get("main_menu").format(total_users_count, i18n.get(user_role)),
+        reply_markup = build_main_menu_kb(i18n)
+    )
+
     username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} начал чат с ботом")
 
@@ -31,21 +43,9 @@ async def process_help_command(
     i18n: dict
 ):
     await message.answer(text=i18n.get("/help"))
+
     username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} прописал команду /help")
-
-
-@router.message(Command(commands=["find"]))
-async def process_find_command(
-    message: Message,
-    i18n: dict
-):
-    await message.answer(
-        text=i18n.get("/find"),
-        reply_markup=build_search_kb()
-    )
-    username = message.from_user.username if message.from_user.username else message.from_user.first_name
-    logger.debug(f"Пользователь {username} прописал команду /find")
 
 
 @router.message(F.text.startswith("suggest_new_definition"))
@@ -57,7 +57,7 @@ async def process_definition_suggestion(
     await message.delete()
     await message.answer(
         text=i18n.get("suggest_new_definition").format(suggested_definition),
-        reply_markup=build_suggestion_kb(suggested_definition)
+        reply_markup=build_suggestion_kb(i18n, suggested_definition)
     )
     username = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} прописал команду /help")
@@ -75,8 +75,10 @@ async def process_getting_term_info(
 
     await message.delete()
 
+    username = message.from_user.username if message.from_user.username else message.from_user.first_name
+
     if data is None:
-        logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.")
+        logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
         return
 
     if data["action"] == "get_term_info":
