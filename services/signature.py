@@ -3,9 +3,13 @@ import hashlib
 import base64
 import time
 import json
+import logging
 from typing import Optional
 
 from config_data.config import Config, load_config
+
+
+logger = logging.getLogger(__name__)
 
 config: Config = load_config('.env')
 
@@ -43,14 +47,14 @@ def verify_payload(spoiler_text: str) -> Optional[dict]:
         expected_sig = hmac.new(SECRET_KEY, payload_raw, hashlib.sha256).digest()
 
         if sig in USED_SIGNATURES:
-            print("[verify_payload] Signature already used — REJECTING")
+            logger.debug("Была попытка использовать уже использованную сигнатуру, отклоняем данный payload")
             return None
 
         if not hmac.compare_digest(sig, expected_sig):
-            print("[verify_payload] Signature mismatch — REJECTING")
-            print("  ➤ payload_raw (decoded JSON):", payload_raw.decode(errors="replace"))
-            print("  ➤ expected_sig (hex):", expected_sig.hex())
-            print("  ➤ actual sig (hex)   :", sig.hex())
+            logger.debug("Несовпадение сигнатуры, отклоняем данный payload")
+            logger.debug("  ➤ payload_raw (decoded JSON):", payload_raw.decode(errors="replace"))
+            logger.debug("  ➤ expected_sig (hex):", expected_sig.hex())
+            logger.debug("  ➤ actual sig (hex)   :", sig.hex())
             return None
 
         data = json.loads(payload_raw.decode())
@@ -58,6 +62,6 @@ def verify_payload(spoiler_text: str) -> Optional[dict]:
         return data
 
     except Exception as e:
-        print("[verify_payload] Exception:", e)
+        logger.debug("Что-то пошло не так при верификации payload'а: ", e)
         return None
 
