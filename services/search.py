@@ -1,39 +1,45 @@
 import logging
 
-from rapidfuzz import fuzz
-import random
 import uuid
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 
+from database.models import Term, Source, Definition
+from database.db import get_random_terms, search_terms_by_prefix, search_terms_by_similarity
+
 from services.signature import generate_payload
-from services.text import normalize
 
 logger = logging.getLogger(__name__)
 
 
-def _get_random_terms(count: int, user_id: int, indexed_terms: list[dict[str, str]]) -> list[InlineQueryResultArticle]:
-    sampled = random.sample(indexed_terms, k=min(count, len(indexed_terms)))
-    results = []
+async def _get_ready_random_terms(
+    session: AsyncSession,
+    *,
+    quantity: int,
+    user_id: int
+) -> list[InlineQueryResultArticle]:
+    results: list[InlineQueryResultArticle] = []
 
-    for term_entry in sampled:
-        term = term_entry["term"]
-        sources = term_entry["sources"]
+    random_terms: list[Term] = await get_random_terms(session, quantity=quantity)
 
-        first_source = next(iter(sources.values()))
-        first_definition = first_source[0]["definition"]
+    for term in random_terms:
+        sources: list[Source] = term.sources
+
+        first_source: Source = sources[0]
+        first_definition: Definition = first_source.definitions[0]
 
         message = generate_payload({
             "action": "get_term_info",
             "user_id": user_id,
-            "term": term
+            "term": term.name
         })
 
         results.append(
             InlineQueryResultArticle(
                 id=str(uuid.uuid4()),
-                title=term,
-                description=first_definition[:250],
+                title=term.name,
+                description=first_definition.text[:250],
                 input_message_content=InputTextMessageContent(
                     message_text=message
                 )
@@ -43,9 +49,13 @@ def _get_random_terms(count: int, user_id: int, indexed_terms: list[dict[str, st
     return results
 
 
-def search_definitions(query: str, user_id: int, indexed_terms: list[dict[str, str]]) -> list[InlineQueryResultArticle]:
-    normalized_query: str = normalize(query)
-    results = []
+async def search_definitions(
+    session: AsyncSession,
+    *,
+    query: str,
+    user_id: int
+) -> list[InlineQueryResultArticle]:
+    results: list[InlineQueryResultArticle] = []
 
     if not query.strip():
         message = generate_payload({
@@ -63,62 +73,43 @@ def search_definitions(query: str, user_id: int, indexed_terms: list[dict[str, s
                 )
             )
         )
-        results.extend(_get_random_terms(10, user_id, indexed_terms))
+        results.extend(await _get_ready_random_terms(session, quantity=10, user_id=user_id))
     else:
-        matched = []
+        if len(query) < 3:
+            found_terms: list[Term] = await search_terms_by_prefix(session, query=query)
+        else:
+            prefix_terms: list[Term] = await search_terms_by_prefix(session, query=query, prefix=False) or []
+            sim_terms: list[Term] = await search_terms_by_similarity(session, query=query) or []
 
-        for term_entry in indexed_terms:
-            if normalized_query == term_entry["normalized"]:
-                matched.append((100, term_entry))
+            unique_terms: dict[int, Term] = {t.id: t for t in prefix_terms + sim_terms}
+            found_terms: list[Term] = list(unique_terms.values())
 
-        for term_entry in indexed_terms:
-            if term_entry["normalized"].startswith(normalized_query):
-                matched.append((90, term_entry))
+        for term in found_terms:
+            sources: list[Source] = term.sources
 
-        if len(normalized_query) >= 3:
-            for term_entry in indexed_terms:
-                score = fuzz.partial_ratio(normalized_query, term_entry["normalized"])
-                if score >= 85:
-                    matched.append((score, term_entry))
-
-        unique_matched = sorted(matched, key=lambda x: x[0], reverse=True)
-        seen_terms = set()
-        top_results = []
-
-        for score, term_entry in unique_matched:
-            term = term_entry["term"]
-            if term in seen_terms:
-                continue
-            seen_terms.add(term)
-
-            sources = term_entry["sources"]
-            first_source = next(iter(sources.values()))
-            first_definition = first_source[0]["definition"]
+            first_source: Source = sources[0]
+            first_definition: Definition = first_source.definitions[0]
 
             message = generate_payload({
                 "action": "get_term_info",
                 "user_id": user_id,
-                "term": term
+                "term": term.name
             })
 
             result = InlineQueryResultArticle(
                 id=f"result_{uuid.uuid4().hex[:8]}",
-                title=term,
-                description=first_definition[:250],
+                title=term.name,
+                description=first_definition.text[:250],
                 input_message_content=InputTextMessageContent(
                     message_text=message
                 )
             )
-            top_results.append(result)
 
-            if len(top_results) >= 10:
-                break
-
-        results.extend(top_results)
+            results.append(result)
 
         if not results:
             message_not_found = generate_payload({
-                "action": "definition_was_not_found",
+                "action": "term_was_not_found",
                 "user_id": user_id
             })
             message_suggest_new_term = generate_payload({
