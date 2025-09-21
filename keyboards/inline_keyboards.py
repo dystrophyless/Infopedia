@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.models import Term, Source, Definition
-from utils.callback_factories import SourceCallback, TermCallback
+from utils.callback_factories import TermCallback
 from enums.grades import UserGrade
 
 
@@ -157,34 +157,32 @@ def build_suggestion_decision_kb(user_id: int) -> InlineKeyboardMarkup:
 def build_sources_kb(
     *,
     term: Term,
-    current_source_name: str = "Алматыкітап: 7-сынып",
+    current_source: Source,
     current_index: int = 0
 ) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
 
     sources: list[Source] = term.sources
 
-    first_source: Source = sources[0]
-
-    total_indexes = len(first_source.definitions)
-
-    current_source: Source = Source()
+    total_indexes = len(current_source.definitions)
 
     for source in sources:
-        if source.name == current_source_name:
-            kb_builder.button(
-                text=f"✅ {source.name}",
-                callback_data="noop"
+        if source.name == current_source.name:
+            kb_builder.row(
+                InlineKeyboardButton(
+                    text=f"✅ {source.name}",
+                    callback_data="noop"
+                )
             )
-            current_source: Source = source
         else:
-            kb_builder.button(
-                text=source.name,
-                callback_data=SourceCallback(term_id=term.id, source_id=source.id).pack()
+            kb_builder.row(
+                InlineKeyboardButton(
+                    text=source.name,
+                    callback_data=TermCallback(term_id=term.id, source_id=source.id, index=0).pack()
+                )
             )
 
     nav_row = []
-
 
     if total_indexes > 1:
         if current_index > 0:
@@ -212,8 +210,6 @@ def build_sources_kb(
 
         if nav_row:
             kb_builder.row(*nav_row)
-
-    kb_builder.adjust(1, len(nav_row))
 
     return kb_builder.as_markup()
 
