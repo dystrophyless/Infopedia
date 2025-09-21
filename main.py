@@ -14,11 +14,11 @@ from redis.asyncio import Redis
 
 from logs.logging_settings import logging_config
 from config_data.config import Config, load_config
-from services.data import load_terms, load_indexed_terms, generate_id_maps
 from handlers import register_handlers, language_handlers, user_handlers, admin_handlers, inline_handlers, menu_handlers
 from i18n.translator import get_translations
-from database.connection import get_async_engine, get_sessionmaker
-from database.db import get_total_users
+from database.connection import get_async_engine, get_sessionmaker, init_extensions
+from database.db import get_total_users, get_total_terms
+from database.loader import load_terms_from_json
 
 from middlewares.throttler import ThrottlingMiddleware
 from middlewares.database import DatabaseMiddleware
@@ -41,10 +41,6 @@ async def main() -> None:
     logger.debug("Процесс запуск бота был начат")
 
     config: Config = load_config(".env")
-
-    terms = load_terms()
-    indexed_terms = load_indexed_terms()
-    term_ids, term_names_to_ids, source_ids, source_names_to_ids = generate_id_maps(terms)
 
     storage = RedisStorage(
         redis=Redis(
@@ -75,7 +71,14 @@ async def main() -> None:
 
     sessionmaker = get_sessionmaker(engine)
 
+    async with sessionmaker() as session:
+        await load_terms_from_json(session, "database/terms.json")
+        logger.debug("Термины успешно загружены в БД")
+
+    await init_extensions(engine)
+
     total_users_count: int = await get_total_users(sessionmaker)
+    total_terms_count: int = await get_total_terms(sessionmaker)
 
     translations = get_translations()
     locales = list(translations.keys())
@@ -101,14 +104,9 @@ async def main() -> None:
     dp["channel_link"] = config.bot.channel_link
     dp["admin_ids"] = config.bot.admin_ids
     dp["group_id"] = config.bot.group_id
-    dp["terms"] = terms
-    dp["indexed_terms"] = indexed_terms
-    dp["term_ids"] = term_ids
-    dp["term_names_to_ids"] = term_names_to_ids
-    dp["source_ids"] = source_ids
-    dp["source_names_to_ids"] = source_names_to_ids
-    dp["total_users_count"] = total_users_count
     dp["sessionmaker"] = sessionmaker
+    dp["total_users_count"] = total_users_count
+    dp["total_terms_count"] = total_terms_count
     dp["translations"] = translations
     dp["locales"] = locales
 
