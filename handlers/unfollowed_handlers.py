@@ -29,7 +29,7 @@ async def process_any_message(
 
     await state.set_state(FSMMembership.await_membership)
 
-    username = message.from_user.username if message.from_user.username else message.from_user.first_name
+    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug("Пользователь с username=`%s` который был зарегистрирован отписался от Infopedia, поэтому требуем обратную подписки", username)
 
 

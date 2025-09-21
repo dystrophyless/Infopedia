@@ -33,7 +33,7 @@ class RegistrationMiddleware(BaseMiddleware):
             logger.error("Соединение с базой данных не было найдено в данных мидлвари")
             raise RuntimeError("Отсутствует соединение с базой данных для проверки зарегистрирован ли пользователь")
 
-        username = user.username if user.username else user.first_name
+        username: str = user.username if user.username else user.first_name
 
         db_user: Users = await get_user(session, user_id=user.id)
 
