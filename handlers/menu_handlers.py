@@ -40,6 +40,7 @@ async def process_main_menu_button(
     message: Message,
     i18n: dict,
     total_users_count: int,
+    total_terms_count: int,
     session: AsyncSession
 ):
     await message.delete()
@@ -47,6 +48,6 @@ async def process_main_menu_button(
     user_role: str = await get_user_role(session, user_id=message.from_user.id)
 
     await message.answer(
-        text=i18n.get("main_menu").format(total_users_count, i18n.get(user_role)),
+        text=i18n.get("main_menu").format(total_users_count, total_terms_count, i18n.get(user_role)),
         reply_markup=build_main_menu_kb(i18n)
     )
