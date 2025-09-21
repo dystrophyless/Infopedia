@@ -13,7 +13,8 @@ class Users(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True)
-    username: Mapped[str | None] = mapped_column(String(50))
+    username: Mapped[str | None] = mapped_column(String(64))
+    first_name: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("TIMEZONE('utc', now())"))
     language: Mapped[str] = mapped_column(String(2), nullable=False)
     grade: Mapped[str] = mapped_column(String(16), nullable=False)
