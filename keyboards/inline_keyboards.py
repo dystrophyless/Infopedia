@@ -213,7 +213,7 @@ def build_sources_kb(
         if nav_row:
             kb_builder.row(*nav_row)
 
-    kb_builder.adjust(len(sources), len(nav_row))
+    kb_builder.adjust(1, len(nav_row))
 
     return kb_builder.as_markup()
 
