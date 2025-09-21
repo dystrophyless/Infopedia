@@ -1,5 +1,6 @@
 import logging
-import html
+
+from html import escape
 
 from aiogram import Router, Bot, F
 from aiogram.types import Message, CallbackQuery
@@ -35,7 +36,7 @@ async def process_start_command(
         reply_markup = build_main_menu_kb(i18n)
     )
 
-    username = message.from_user.username if message.from_user.username else message.from_user.first_name
+    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} начал чат с ботом")
 
 
@@ -46,7 +47,7 @@ async def process_help_command(
 ):
     await message.answer(text=i18n.get("/help"))
 
-    username = message.from_user.username if message.from_user.username else message.from_user.first_name
+    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug(f"Пользователь {username} прописал команду /help")
 
 
@@ -60,14 +61,14 @@ async def process_getting_term_info(
 
     await message.delete()
 
-    username = message.from_user.username if message.from_user.username else message.from_user.first_name
+    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
 
     if data is None:
         logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
         return
 
     if data["action"] == "get_term_info":
-        term_name = data["term"]
+        term_name: str = data["term"]
 
         term: Term = await get_term_by_name(session, name=term_name)
 
@@ -81,8 +82,8 @@ async def process_getting_term_info(
 
         first_source_definition: Definition = first_source.definitions[0]
 
-        definition: str = html.escape(first_source_definition.text)
-        topic: str = html.escape(first_source_definition.topic)
+        definition: str = escape(first_source_definition.text)
+        topic: str = escape(first_source_definition.topic)
         page: int = first_source_definition.page
 
         await message.answer(
@@ -104,14 +105,24 @@ async def process_definition_suggestion(
     message: Message,
     i18n: dict
 ):
-    suggested_term: str = message.text.split(":")[1]
+    data = verify_payload(message.text)
+
     await message.delete()
-    await message.answer(
-        text=i18n.get("suggest_new_term").format(suggested_term),
-        reply_markup=build_suggestion_kb(i18n, suggested_term)
-    )
-    username = message.from_user.username if message.from_user.username else message.from_user.first_name
-    logger.debug(f"Пользователь {username} предложил следующий термин с `name`=`{suggested_term}`")
+
+    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
+
+    if data is None:
+        logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
+        return
+
+    if data["action"] == "suggest_new_term":
+        suggested_term: str = data["term"]
+
+        await message.answer(
+            text=i18n.get("suggest_new_term").format(suggested_term),
+            reply_markup=build_suggestion_kb(i18n, suggested_term)
+        )
+        logger.debug(f"Пользователь {username} предложил следующий термин с `name`=`{suggested_term}`")
 
 
 @router.callback_query(F.data.startswith("suggestion_positive_reply"))
@@ -121,16 +132,25 @@ async def process_suggestion_positive_reply(
     group_id: str,
     i18n: dict
 ):
-    suggested_term = callback.data.split(":")[1]
-    username = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
+    suggested_term: str = callback.data.split(":")[1]
+    username: str = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
+    exact_username: str = callback.from_user.username
+
+
 
     await callback.message.edit_text(
-        text=i18n.get("suggestion_positive_reply")
+        text=i18n.get("suggestion_positive_reply").format(suggested_term)
     )
+
+    if exact_username:
+        link = f"https://t.me/{username}"
+    else:
+        link = f"tg://user?id={callback.from_user.id}"
+
     await bot.send_message(
         chat_id=group_id,
         text=f"📄 Было предложено добавить новый термин: <b>{suggested_term}</b>\n\n"
-             f"👤 От пользователя: <a href=\"tg://user?id={callback.from_user.id}\">{username}</a>",
+             f"👤 От пользователя: <a href=\"{link}\">{escape(username)}</a>",
         reply_markup=build_suggestion_decision_kb(callback.from_user.id)
     )
     logger.debug("Пользователь с `username`='%s' предложил следующий термин: %s", username, suggested_term)
@@ -158,8 +178,8 @@ async def process_source_change(
 
     first_definition: Definition = definitions[0]
 
-    definition: str = html.escape(first_definition.text)
-    topic: str = html.escape(first_definition.topic)
+    definition: str = escape(first_definition.text)
+    topic: str = escape(first_definition.topic)
     page: int = first_definition.page
 
     await callback.message.edit_text(
@@ -187,8 +207,8 @@ async def process_definition_change(
 
     indexed_definition = definitions[index]
 
-    definition = html.escape(indexed_definition.text)
-    topic = html.escape(indexed_definition.topic)
+    definition = escape(indexed_definition.text)
+    topic = escape(indexed_definition.topic)
     page = indexed_definition.page
 
     await callback.message.edit_text(
