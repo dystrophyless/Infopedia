@@ -12,7 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from keyboards.inline_keyboards import build_search_kb, build_suggestion_kb, build_suggestion_decision_kb, build_sources_kb
 from keyboards.main_menu import build_main_menu_kb
 from services.signature import verify_payload
-from utils.callback_factories import SourceCallback, TermCallback
+from services.terms import get_term_info
+from utils.callback_factories import TermCallback
 from database.models import Term, Source, Definition
 from database.db import get_user_role, get_term_by_name, get_term_by_id, get_source_by_id
 
@@ -67,29 +68,20 @@ async def process_getting_term_info(
         logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
         return
 
+    term: Term = await get_term_by_name(session, name=data["term"])
+
+    if term is None:
+        logger.debug("Не удалось найти термин `name=%s` в базе данных", term)
+        return
+
     if data["action"] == "get_term_info":
-        term_name: str = data["term"]
+        text, kb = await get_term_info(term=term, i18n=i18n)
 
-        term: Term = await get_term_by_name(session, name=term_name)
-
-        if term is None:
-            logger.debug("Не удалось найти термин `name=%s` в базе данных", term)
+        if text is None:
+            logger.debug("Не удалось найти термин `name=%s` в базе данных", data["term"])
             return
 
-        sources: list[Source] = term.sources
-
-        first_source: Source = sources[0]
-
-        first_source_definition: Definition = first_source.definitions[0]
-
-        definition: str = escape(first_source_definition.text)
-        topic: str = escape(first_source_definition.topic)
-        page: int = first_source_definition.page
-
-        await message.answer(
-            text=i18n.get("get_term_info").format(term.name, definition, topic, page),
-            reply_markup=build_sources_kb(term=term, current_source_name=first_source.name),
-        )
+        await message.answer(text=text, reply_markup=kb)
 
 
 @router.callback_query(F.data == "noop")
@@ -136,14 +128,13 @@ async def process_suggestion_positive_reply(
     username: str = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
     exact_username: str = callback.from_user.username
 
-
-
     await callback.message.edit_text(
         text=i18n.get("suggestion_positive_reply").format(suggested_term)
     )
 
     if exact_username:
         link = f"https://t.me/{username}"
+        username = f"@{username}"
     else:
         link = f"tg://user?id={callback.from_user.id}"
 
@@ -161,34 +152,6 @@ async def process_suggestion_negative_reply(callback: CallbackQuery):
     await callback.message.delete()
 
 
-@router.callback_query(SourceCallback.filter())
-async def process_source_change(
-    callback: CallbackQuery,
-    callback_data: SourceCallback,
-    i18n: dict,
-    session: AsyncSession
-):
-    term: Term = await get_term_by_id(session, id=callback_data.term_id)
-    source: Source = await get_source_by_id(session, id=callback_data.source_id)
-    definitions: list[Definition] = source.definitions
-
-    if not definitions:
-        logging.debug(f"У источника {source} не найдены дефиниции для термина {term}.")
-        return
-
-    first_definition: Definition = definitions[0]
-
-    definition: str = escape(first_definition.text)
-    topic: str = escape(first_definition.topic)
-    page: int = first_definition.page
-
-    await callback.message.edit_text(
-        text=i18n.get("get_term_info").format(term.name, definition, topic, page),
-        reply_markup=build_sources_kb(term=term, current_source_name=source.name)
-    )
-    await callback.answer()
-
-
 @router.callback_query(TermCallback.filter())
 async def process_definition_change(
     callback: CallbackQuery,
@@ -198,21 +161,16 @@ async def process_definition_change(
 ):
     term: Term = await get_term_by_id(session, id=callback_data.term_id)
     source: Source = await get_source_by_id(session, id=callback_data.source_id)
-    definitions: list[Definition] = source.definitions
     index = callback_data.index
 
-    if not definitions:
-        logging.debug(f"У источника {source} не найдены дефиниции для термина {term}.")
+    text, kb = await get_term_info(term=term, source=source, index=index, i18n=i18n)
+
+    if text is None:
+        logger.debug("Не удалось перейти к источнику/дефиниции у термина с `name`='%s'", term.name)
         return
 
-    indexed_definition = definitions[index]
-
-    definition = escape(indexed_definition.text)
-    topic = escape(indexed_definition.topic)
-    page = indexed_definition.page
-
     await callback.message.edit_text(
-        text=i18n.get("get_term_info").format(term.name, definition, topic, page),
-        reply_markup=build_sources_kb(term=term, current_source_name=source.name, current_index=index)
+        text=text,
+        reply_markup=kb
     )
     await callback.answer()
