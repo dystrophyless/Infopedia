@@ -1,11 +1,11 @@
 from aiogram.filters.callback_data import CallbackData
 
 class SourceCallback(CallbackData, prefix='source'):
-    term: int
-    source: int
+    term_id: int
+    source_id: int
 
 
 class TermCallback(CallbackData, prefix='term'):
-    term: int
-    source: int
+    term_id: int
+    source_id: int
     index: int
