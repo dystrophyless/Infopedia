@@ -8,6 +8,7 @@ from aiogram.filters import Command, CommandObject, StateFilter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from enums.roles import UserRole
+from schemas.user import UserStat
 from filters.filters import UserRoleFilter
 from database.db import get_statistics, get_user_banned_status_by_id, get_user_banned_status_by_username, change_user_banned_status_by_id, change_user_banned_status_by_username
 
@@ -33,15 +34,19 @@ async def process_admin_statistics_command(
     session: AsyncSession,
     i18n: dict
 ):
-    statistics = await get_statistics(session)
-    await message.answer(
-        text=i18n.get("stats").format(
-            "\n".join(
-                f"{i}. <b>{stat[0]}</b>: {stat[1]}"
-                for i, stat in enumerate(statistics, 1)
+    statistics: list[UserStat] = await get_statistics(session)
+
+    if statistics:
+        await message.answer(
+            text=i18n.get("stats").format(
+                "\n".join(
+                    f"{i}. {stat.link}: {stat.total_actions}"
+                    for i, stat in enumerate(statistics, 1)
+                )
             )
         )
-    )
+    else:
+        await message.answer(text=i18n.get("stats_were_not_found"))
 
 
 @router.message(Command(commands=["ban"]))
