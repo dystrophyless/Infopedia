@@ -112,6 +112,16 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
+        'services.search': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'services.signature': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
     },
     'root': {
         'formatter': 'default',
