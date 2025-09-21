@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from database.models import Term, Source, Definition
 from utils.callback_factories import SourceCallback, TermCallback
 from enums.grades import UserGrade
 
@@ -113,13 +114,13 @@ def build_search_kb(i18n: dict) -> InlineKeyboardMarkup:
     )
 
 
-def build_suggestion_kb(i18n: dict, suggested_definition: str) -> InlineKeyboardMarkup:
+def build_suggestion_kb(i18n: dict, suggested_term: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text=i18n.get("suggestion_positive_reply_button"),
-                    callback_data=f"suggestion_positive_reply:{suggested_definition}"
+                    callback_data=f"suggestion_positive_reply:{suggested_term}"
                 ),
                 InlineKeyboardButton(
                     text=i18n.get("suggestion_negative_reply_button"),
@@ -136,11 +137,11 @@ def build_suggestion_decision_kb(user_id: int) -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="✅ Принять",
-                    callback_data="add_new_definition"
+                    callback_data="add_new_term"
                 ),
                 InlineKeyboardButton(
                     text="❌ Отклонить",
-                    callback_data="deny_new_definition"
+                    callback_data="deny_new_term"
                 )
             ],
             [
@@ -153,42 +154,44 @@ def build_suggestion_decision_kb(user_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def build_sources_kb(term: str, terms: dict, term_names_to_ids: dict[str, int], source_names_to_ids: dict[str, int], current_source_name: str = "Алматыкітап: 7-сынып", current_index: int = 0) -> InlineKeyboardMarkup:
+def build_sources_kb(
+    *,
+    term: Term,
+    current_source_name: str = "Алматыкітап: 7-сынып",
+    current_index: int = 0
+) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
 
-    sources = terms[term]
+    sources: list[Source] = term.sources
 
-    source_names = list(sources.keys())
-    first_source_name, first_source_entries = next(iter(sources.items()))
+    first_source: Source = sources[0]
 
-    total_indexes = len(first_source_entries)
+    total_indexes = len(first_source.definitions)
 
-    term_id = term_names_to_ids[term]
+    current_source: Source = Source()
 
-    for source_name in source_names:
-        source_id = source_names_to_ids[source_name]
-
-        if source_name == current_source_name:
+    for source in sources:
+        if source.name == current_source_name:
             kb_builder.button(
-                text=f"✅ {source_name}",
+                text=f"✅ {source.name}",
                 callback_data="noop"
             )
+            current_source: Source = source
         else:
             kb_builder.button(
-                text=source_name,
-                callback_data=SourceCallback(term=term_id, source=source_id).pack()
+                text=source.name,
+                callback_data=SourceCallback(term_id=term.id, source_id=source.id).pack()
             )
 
     nav_row = []
 
-    source_id = source_names_to_ids[current_source_name]
 
     if total_indexes > 1:
         if current_index > 0:
             nav_row.append(
                 InlineKeyboardButton(
                     text="◀ Предыдущее",
-                    callback_data=TermCallback(term=term_id, source=source_id, index=current_index-1).pack()
+                    callback_data=TermCallback(term_id=term.id, source_id=current_source.id, index=current_index-1).pack()
                 )
             )
 
@@ -203,14 +206,14 @@ def build_sources_kb(term: str, terms: dict, term_names_to_ids: dict[str, int], 
             nav_row.append(
                 InlineKeyboardButton(
                     text="Следующее ▶",
-                    callback_data=TermCallback(term=term_id, source=source_id, index=current_index+1).pack()
+                    callback_data=TermCallback(term_id=term.id, source_id=current_source.id, index=current_index+1).pack()
                 )
             )
 
         if nav_row:
             kb_builder.row(*nav_row)
 
-    kb_builder.adjust(len(source_names), len(nav_row))
+    kb_builder.adjust(len(sources), len(nav_row))
 
     return kb_builder.as_markup()
 
