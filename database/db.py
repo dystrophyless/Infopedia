@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from database.models import Users, Activity, Term, Source, Definition
 from enums.roles import UserRole
 from enums.grades import UserGrade
+from schemas.user import UserStat
 
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ async def add_user(
     *,
     user_id: int,
     username: str | None = None,
+    first_name: str,
     language: str = "ru",
     grade: UserGrade = UserGrade.GRADE_UNDEFINED,
     role: UserRole = UserRole.USER,
@@ -27,6 +29,7 @@ async def add_user(
     new_user = Users(
         user_id=user_id,
         username=username,
+        first_name=first_name,
         language=language,
         grade=grade,
         role=role,
@@ -39,8 +42,9 @@ async def add_user(
         await session.commit()
         logger.debug(
             "Пользователь был добавлен в базу данных."
-            "user_id='%d', `language`='%s', `grade`='%s', `role`='%s', `is_alive`='%s', `banned`='%s'",
+            "user_id='%d', `first_name`='%s', `language`='%s', `grade`='%s', `role`='%s', `is_alive`='%s', `banned`='%s'",
             user_id,
+            first_name,
             language,
             grade,
             role,
@@ -81,7 +85,7 @@ async def change_user_alive_status(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return
 
     user.is_alive = is_alive
@@ -103,7 +107,7 @@ async def change_user_banned_status_by_id(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return
 
     user.banned = banned
@@ -125,7 +129,7 @@ async def change_user_banned_status_by_username(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `username`='%s' из базы данных", username)
+        logger.debug("Не удалось получить пользователя с `username`='%s' из базы данных", username)
         return
 
     user.banned = banned
@@ -147,7 +151,7 @@ async def update_user_language(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return
 
     user.language = language
@@ -168,7 +172,7 @@ async def get_user_language(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
 
     language: str = user.language
@@ -191,7 +195,7 @@ async def get_user_alive_status(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
 
     is_alive: bool = user.is_alive
@@ -214,7 +218,7 @@ async def get_user_banned_status_by_id(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
 
     banned: bool = user.banned
@@ -237,7 +241,7 @@ async def get_user_banned_status_by_username(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `username`='%s' из базы данных", username)
+        logger.debug("Не удалось получить пользователя с `username`='%s' из базы данных", username)
         return None
 
 
@@ -261,7 +265,7 @@ async def get_user_role(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
 
     role: str = user.role
@@ -284,7 +288,7 @@ async def get_user_grade(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.debug("Не получилось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
 
     grade: str = user.grade
@@ -306,10 +310,16 @@ async def add_user_activity(
     logger.debug("Активность пользователя с `user_id`='%d' была обновлена в таблице `activity`", user_id)
 
 
-async def get_statistics(session: AsyncSession) -> list[tuple[int, int]] | None:
+async def get_statistics(session: AsyncSession) -> list[UserStat] | None:
     query = (
-        select(Activity.user_id, func.sum(Activity.actions).label("total_actions"))
-        .group_by(Activity.user_id)
+        select(
+            Activity.user_id,
+            func.sum(Activity.actions).label("total_actions"),
+            Users.username,
+            Users.first_name,
+        )
+        .join(Users, Users.user_id == Activity.user_id)
+        .group_by(Activity.user_id, Users.username, Users.first_name)
         .order_by(func.sum(Activity.actions).desc())
         .limit(5)
     )
@@ -318,8 +328,23 @@ async def get_statistics(session: AsyncSession) -> list[tuple[int, int]] | None:
 
     rows = result.all()
 
+    if not rows:
+        logger.debug("Не удалось получить статистику активности пользователей из базы данных")
+        return None
+
+
+    statistics: list[UserStat] = [
+        UserStat(
+            user_id=user_id,
+            username=username,
+            first_name=first_name,
+            total_actions=total_actions
+        )
+        for user_id, total_actions, username, first_name in rows
+    ]
+
     logger.debug("Была получена статистика активности пользователей с таблицы `activity`")
-    return [*rows] if rows else None
+    return statistics
 
 
 async def get_total_users(sessionmaker: async_sessionmaker[AsyncSession]) -> int | None:
@@ -358,7 +383,7 @@ async def get_term_by_name(
     result = await session.execute(select(Term).filter_by(name=name))
 
     if result is None:
-        logger.debug("Не получилось получить термин с `name`='%s' из базы данных", name)
+        logger.debug("Не удалось получить термин с `name`='%s' из базы данных", name)
         return None
 
     term: Term = result.scalar_one_or_none()
@@ -377,7 +402,7 @@ async def get_term_by_id(
     )
 
     if result is None:
-        logger.debug("Не получилось получить термин с `id`='%s' из базы данных", id)
+        logger.debug("Не удалось получить термин с `id`='%s' из базы данных", id)
         return None
 
     term: Term = result.scalar_one_or_none()
@@ -396,7 +421,7 @@ async def get_source_by_id(
     )
 
     if result is None:
-        logger.debug("Не получилось получить источник с `id`='%s' из базы данных", id)
+        logger.debug("Не удалось получить источник с `id`='%s' из базы данных", id)
         return None
 
     source: Source = result.scalar_one_or_none()
@@ -415,7 +440,7 @@ async def get_random_terms(
     )
 
     if result is None:
-        logger.debug("Не получилось получить рандомные термины из базы данных")
+        logger.debug("Не удалось получить рандомные термины из базы данных")
         return None
 
     terms: list[Term] = list(result.scalars().all())
@@ -439,7 +464,7 @@ async def search_terms_by_prefix(
     )
 
     if result is None:
-        logger.debug("Не получилось получить термины которые начинаются на `query=%s` из базы данных", query)
+        logger.debug("Не удалось получить термины которые начинаются на `query=%s` из базы данных", query)
         return None
 
     terms: list[Term] = list(result.scalars().all())
@@ -461,7 +486,7 @@ async def search_terms_by_similarity(
     )
 
     if result is None:
-        logger.debug("Не получилось получить термины похожие на `query=%s` из базы данных", query)
+        logger.debug("Не удалось получить термины похожие на `query=%s` из базы данных", query)
         return None
 
     terms: list[Term] = list(result.scalars().all())
