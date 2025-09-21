@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
-from database.models import Users, Activity
+from database.models import Users, Activity, Term, Source, Definition
 from enums.roles import UserRole
 from enums.grades import UserGrade
 
@@ -57,7 +57,10 @@ async def get_user(
     *,
     user_id: int
 ) -> Users | None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -70,7 +73,10 @@ async def change_user_alive_status(
     is_alive: bool,
     user_id: int
 ) -> None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -89,7 +95,10 @@ async def change_user_banned_status_by_id(
     banned: bool,
     user_id: int
 ) -> None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -108,7 +117,10 @@ async def change_user_banned_status_by_username(
     banned: bool,
     username: str
 ) -> None:
-    result = await session.execute(select(Users).filter_by(username=username))
+    result = await session.execute(
+        select(Users)
+        .filter_by(username=username)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -127,7 +139,10 @@ async def update_user_language(
     language: str,
     user_id: int
 ) -> None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -145,7 +160,10 @@ async def get_user_language(
     *,
     user_id: int
 ) -> str | None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -165,7 +183,10 @@ async def get_user_alive_status(
     *,
     user_id: int
 ) -> bool | None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -185,7 +206,10 @@ async def get_user_banned_status_by_id(
     *,
     user_id: int
 ) -> bool | None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -205,7 +229,10 @@ async def get_user_banned_status_by_username(
     *,
     username: str
 ) -> bool | None:
-    result = await session.execute(select(Users).filter_by(username=username))
+    result = await session.execute(
+        select(Users)
+        .filter_by(username=username)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -226,7 +253,10 @@ async def get_user_role(
     *,
     user_id: int
 ) -> UserRole | None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users).
+        filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -246,7 +276,10 @@ async def get_user_grade(
     *,
     user_id: int
 ) -> UserGrade | None:
-    result = await session.execute(select(Users).filter_by(user_id=user_id))
+    result = await session.execute(
+        select(Users)
+        .filter_by(user_id=user_id)
+    )
 
     user = result.scalar_one_or_none()
 
@@ -301,3 +334,136 @@ async def get_total_users(sessionmaker: async_sessionmaker[AsyncSession]) -> int
         except Exception as e:
             logger.exception("Транзакция откатилась из-за ошибки: %s", e)
             raise
+
+
+async def get_total_terms(sessionmaker: async_sessionmaker[AsyncSession]) -> int | None:
+    async with sessionmaker() as session:
+        try:
+            async with session.begin():
+                result = await session.execute(select(func.count(Term.id)))
+
+                total_terms_count: int = result.scalar_one_or_none()
+
+                return total_terms_count
+        except Exception as e:
+            logger.exception("Транзакция откатилась из-за ошибки: %s", e)
+            raise
+
+
+async def get_term_by_name(
+    session: AsyncSession,
+    *,
+    name: str
+) -> Term | None:
+    result = await session.execute(select(Term).filter_by(name=name))
+
+    if result is None:
+        logger.debug("Не получилось получить термин с `name`='%s' из базы данных", name)
+        return None
+
+    term: Term = result.scalar_one_or_none()
+
+    return term
+
+
+async def get_term_by_id(
+    session: AsyncSession,
+    *,
+    id: int
+) -> Term | None:
+    result = await session.execute(
+        select(Term)
+        .filter_by(id=id)
+    )
+
+    if result is None:
+        logger.debug("Не получилось получить термин с `id`='%s' из базы данных", id)
+        return None
+
+    term: Term = result.scalar_one_or_none()
+
+    return term
+
+
+async def get_source_by_id(
+    session: AsyncSession,
+    *,
+    id: int
+) -> Source | None:
+    result = await session.execute(
+        select(Source)
+        .filter_by(id=id)
+    )
+
+    if result is None:
+        logger.debug("Не получилось получить источник с `id`='%s' из базы данных", id)
+        return None
+
+    source: Source = result.scalar_one_or_none()
+
+    return source
+
+async def get_random_terms(
+    session: AsyncSession,
+    *,
+    quantity: int
+) -> list[Term] | None:
+    result = await session.execute(
+        select(Term)
+        .order_by(func.random())
+        .limit(quantity)
+    )
+
+    if result is None:
+        logger.debug("Не получилось получить рандомные термины из базы данных")
+        return None
+
+    terms: list[Term] = list(result.scalars().all())
+
+    return terms
+
+
+async def search_terms_by_prefix(
+    session: AsyncSession,
+    *,
+    query: str,
+    limit: int = 10,
+    prefix: bool = True
+) -> list[Term] | None:
+
+    like: str = f"{query}%" if prefix else f"%{query}%"
+    result = await session.execute(
+        select(Term)
+        .where(Term.name.ilike(like))
+        .limit(limit)
+    )
+
+    if result is None:
+        logger.debug("Не получилось получить термины которые начинаются на `query=%s` из базы данных", query)
+        return None
+
+    terms: list[Term] = list(result.scalars().all())
+
+    return terms
+
+
+async def search_terms_by_similarity(
+    session: AsyncSession,
+    *,
+    query: str,
+    limit: int = 10,
+) -> list[Term] | None:
+    result = await session.execute(
+        select(Term)
+        .where(Term.name.op("%")(query))
+        .order_by(func.similarity(Term.name, query).desc())
+        .limit(limit)
+    )
+
+    if result is None:
+        logger.debug("Не получилось получить термины похожие на `query=%s` из базы данных", query)
+        return None
+
+    terms: list[Term] = list(result.scalars().all())
+
+    return terms
