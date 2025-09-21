@@ -1,6 +1,6 @@
 from datetime import datetime, date
 
-from sqlalchemy import text, Integer, BigInteger, String, Date, DateTime, Boolean, UniqueConstraint, ForeignKey
+from sqlalchemy import text, Integer, BigInteger, String, Text, Date, DateTime, Boolean, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -35,3 +35,35 @@ class Activity(Base):
     actions: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     user: Mapped[Users] = relationship(back_populates="activities")
+
+
+class Term(Base):
+    __tablename__ = "terms"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+
+    sources: Mapped[list["Source"]] = relationship(back_populates="term", lazy="selectin")
+
+
+class Source(Base):
+    __tablename__ = "sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    term_id: Mapped[int] = mapped_column(ForeignKey("terms.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    term: Mapped[Term] = relationship(back_populates="sources", lazy="selectin")
+    definitions: Mapped[list["Definition"]] = relationship(back_populates="source", lazy="selectin")
+
+
+class Definition(Base):
+    __tablename__ = "definitions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey("sources.id"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    topic: Mapped[str] = mapped_column(String(255))
+    page: Mapped[int] = mapped_column(Integer)
+
+    source: Mapped[Source] = relationship(back_populates="definitions", lazy="selectin")
