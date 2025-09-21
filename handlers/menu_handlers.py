@@ -8,8 +8,11 @@ from aiogram.fsm.state import default_state
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from services.signature import generate_payload
+from services.terms import get_term_info
 from keyboards.main_menu import build_profile_menu_kb, build_main_menu_kb
-from database.db import get_user_language, get_user_grade, get_user_role
+from database.db import get_user_language, get_user_grade, get_user_role, get_random_terms
+from database.models import Term, Source, Definition
 
 
 logger = logging.getLogger(__name__)
@@ -51,3 +54,18 @@ async def process_main_menu_button(
         text=i18n.get("main_menu").format(total_users_count, total_terms_count, i18n.get(user_role)),
         reply_markup=build_main_menu_kb(i18n)
     )
+
+
+@router.callback_query(F.data == "get_random_term")
+async def process_get_random_term_button(
+    callback: CallbackQuery,
+    i18n: dict,
+    session: AsyncSession
+):
+    random_term: Term = (await get_random_terms(session, quantity=1))[0]
+
+    text, kb = await get_term_info(term=random_term, i18n=i18n)
+
+    await callback.message.answer(text=text, reply_markup=kb)
+    await callback.answer()
+
