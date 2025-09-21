@@ -25,7 +25,7 @@ async def process_profile_menu_button(
 ):
     await message.delete()
 
-    username = message.from_user.username if message.from_user.username else message.from_user.first_name
+    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
     user_language: str = await get_user_language(session, user_id=message.from_user.id)
     user_role: str = await get_user_role(session, user_id=message.from_user.id)
 

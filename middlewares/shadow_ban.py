@@ -24,7 +24,7 @@ class ShadowBanMiddleware(BaseMiddleware):
             logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
-        username = user.username if user.username else user.first_name
+        username: str = user.username if user.username else user.first_name
 
         db_user: Users = data.get("db_user")
 
