@@ -164,7 +164,8 @@ async def process_choosing_grade(
     session: AsyncSession
 ):
     user_id: int = callback.from_user.id
-    username: str = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
+    username: str = callback.from_user.username if callback.from_user.username else None
+    first_name: str = callback.from_user.first_name
     user_language: str = await state.get_value("user_language")
     user_grade: UserGrade = UserGrade(callback.data)
     user_role: UserRole = await state.get_value("user_role")
@@ -173,6 +174,7 @@ async def process_choosing_grade(
         session,
         user_id=user_id,
         username=username,
+        first_name=first_name,
         language=user_language,
         grade=user_grade,
         role=user_role
