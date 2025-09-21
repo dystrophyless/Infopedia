@@ -97,6 +97,7 @@ async def process_cancel_click(
     callback: CallbackQuery,
     i18n: dict,
     total_users_count: int,
+    total_terms_count: int,
     state: FSMContext,
     session: AsyncSession
 ):
@@ -106,7 +107,7 @@ async def process_cancel_click(
     await callback.answer(text=i18n.get("language_cancelled").format(i18n.get(user_language)))
 
     await callback.message.edit_text(
-        text=i18n.get("main_menu").format(total_users_count, i18n.get(user_role)),
+        text=i18n.get("main_menu").format(total_users_count, total_terms_count, i18n.get(user_role)),
         callback_query="go_to_main_menu"
     )
 
