@@ -133,10 +133,10 @@ async def process_suggestion_positive_reply(
     )
 
     if exact_username:
-        link = f"https://t.me/{username}"
-        username = f"@{username}"
+        link: str = f"https://t.me/{username}"
+        username: str = f"@{username}"
     else:
-        link = f"tg://user?id={callback.from_user.id}"
+        link: str = f"tg://user?id={callback.from_user.id}"
 
     await bot.send_message(
         chat_id=group_id,
@@ -161,7 +161,7 @@ async def process_definition_change(
 ):
     term: Term = await get_term_by_id(session, id=callback_data.term_id)
     source: Source = await get_source_by_id(session, id=callback_data.source_id)
-    index = callback_data.index
+    index: int = callback_data.index
 
     text, kb = await get_term_info(term=term, source=source, index=index, i18n=i18n)
 
