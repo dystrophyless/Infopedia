@@ -24,6 +24,14 @@ def get_main_menu_commands(i18n: dict[str, str], role: UserRole):
                 description=i18n.get("/help_description")
             ),
             BotCommand(
+                command="/stats",
+                description=i18n.get("/stats_description")
+            ),
+            BotCommand(
+                command="/feedback",
+                description=i18n.get("/feedback_description")
+            ),
+            BotCommand(
                 command="/ban",
                 description=i18n.get("/ban_description")
             ),
@@ -31,8 +39,4 @@ def get_main_menu_commands(i18n: dict[str, str], role: UserRole):
                 command="/unban",
                 description=i18n.get("/unban_description")
             ),
-            BotCommand(
-                command="/stats",
-                description=i18n.get("/stats_description")
-            )
         ]
