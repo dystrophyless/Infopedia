@@ -5,7 +5,7 @@ import sys
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from database.connection import get_async_engine
+from database.connection import get_async_engine, init_vector_extension
 from database.models import Base
 from logs.logging_settings import logging_config
 from config_data.config import Config, load_config
@@ -30,6 +30,8 @@ async def main():
             user=config.db.user,
             password=config.db.password,
         )
+
+        await init_vector_extension(engine)
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
