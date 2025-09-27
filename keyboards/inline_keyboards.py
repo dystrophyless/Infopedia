@@ -49,7 +49,7 @@ def build_language_settings_kb(i18n: dict, locales: list[str], checked: str) -> 
     buttons.append(
         [
             InlineKeyboardButton(
-                text=i18n.get("cancel_language_button_text"),
+                text=i18n.get("back_to_main_menu"),
                 callback_data="cancel_language_button_data"
             ),
             InlineKeyboardButton(
@@ -106,12 +106,43 @@ def build_search_kb(i18n: dict) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=i18n.get("search_button"),
+                    text=i18n.get("find_term_by_name"),
                     switch_inline_query_current_chat=""
+                ),
+                InlineKeyboardButton(
+                    text=i18n.get("find_term_by_definition"),
+                    callback_data="find_term_by_definition"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=i18n.get("back_to_main_menu"),
+                    callback_data="back_to_main_menu"
                 )
             ]
         ]
     )
+
+
+def build_considering_definition_kb(i18n: dict) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=i18n.get("definition_was_exact"),
+                    callback_data="definition_was_exact"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=i18n.get("definition_was_not_exact"),
+                    callback_data="definition_was_not_exact"
+                )
+            ]
+        ]
+    )
+
+
 
 
 def build_suggestion_kb(i18n: dict, suggested_term: str) -> InlineKeyboardMarkup:
