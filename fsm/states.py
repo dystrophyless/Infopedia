@@ -13,3 +13,8 @@ class FSMLanguage(StatesGroup):
 
 class FSMMembership(StatesGroup):
     await_membership = State()
+
+
+class FSMSearch(StatesGroup):
+    await_definition_to_recognize = State()
+    await_considering_definition = State()
