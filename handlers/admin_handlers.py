@@ -9,8 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from enums.roles import UserRole
 from schemas.user import UserStat
+from schemas.feedback import FeedbackStat
 from filters.filters import UserRoleFilter
-from database.db import get_statistics, get_user_banned_status_by_id, get_user_banned_status_by_username, change_user_banned_status_by_id, change_user_banned_status_by_username
+from database.db import get_activity_statistics_individually, get_user_banned_status_by_id, \
+    get_user_banned_status_by_username, change_user_banned_status_by_id, change_user_banned_status_by_username, \
+    get_search_statistics_individually, get_search_statistics_generally, get_activity_statistics_generally
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +37,45 @@ async def process_admin_statistics_command(
     session: AsyncSession,
     i18n: dict
 ):
-    statistics: list[UserStat] = await get_statistics(session)
+    statistics: list[UserStat] = await get_activity_statistics_individually(session)
+    total_actions = await get_activity_statistics_generally(session)
 
     if statistics:
         await message.answer(
-            text=i18n.get("stats").format(
+            text=i18n.get("/stats").format(
                 "\n".join(
                     f"{i}. {stat.link}: {stat.total_actions}"
                     for i, stat in enumerate(statistics, 1)
-                )
+                ),
+                total_actions
             )
         )
     else:
         await message.answer(text=i18n.get("stats_were_not_found"))
+
+
+@router.message(Command(commands=["feedback"]))
+async def process_admin_feedback_command(
+    message: Message,
+    session: AsyncSession,
+    i18n: dict
+):
+    statistics: list[FeedbackStat] = await get_search_statistics_individually(session)
+    total_queries, total_accuracy = await get_search_statistics_generally(session)
+
+    if statistics:
+        await message.answer(
+            text=i18n.get("/feedback").format(
+                "\n".join(
+                    f"{i}. №{feedback.definition_id}: {feedback.short_term_name} [{feedback.correct_queries}/{feedback.total_queries}] (~{feedback.accuracy}%)"
+                    for i, feedback in enumerate(statistics, 1)
+                ),
+                total_queries,
+                f"~{total_accuracy}%"
+            )
+        )
+    else:
+        await message.answer(text=i18n.get("feedback_was_not_found"))
 
 
 @router.message(Command(commands=["ban"]))
