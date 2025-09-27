@@ -63,7 +63,7 @@ def get_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     )
 
 
-async def init_extensions(engine: AsyncEngine):
+async def init_similarity_extension(engine: AsyncEngine):
     try:
         async with engine.begin() as conn:
             await conn.execute(
@@ -74,6 +74,18 @@ async def init_extensions(engine: AsyncEngine):
             await conn.execute(
                 text(
                     "CREATE INDEX IF NOT EXISTS idx_terms_name_trgm ON terms USING gin (name gin_trgm_ops);"
+                )
+            )
+    except Exception as e:
+        logger.exception("Не удалось инициализировать расширение для поиска по семантике: %s", e)
+
+
+async def init_vector_extension(engine: AsyncEngine):
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "CREATE EXTENSION IF NOT EXISTS vector;"
                 )
             )
     except Exception as e:
