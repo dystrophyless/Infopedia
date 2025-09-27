@@ -2,6 +2,7 @@ from datetime import datetime, date
 
 from sqlalchemy import text, Integer, BigInteger, String, Text, Date, DateTime, Boolean, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 
 
 class Base(DeclarativeBase):
@@ -66,5 +67,20 @@ class Definition(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     topic: Mapped[str] = mapped_column(String(255))
     page: Mapped[int] = mapped_column(Integer)
+    embedding: Mapped[list[float]] = mapped_column(Vector(768))
 
     source: Mapped[Source] = relationship(back_populates="definitions", lazy="selectin")
+
+
+class UserFeedback(Base):
+    __tablename__ = "user_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"), nullable=False)
+    definition_id: Mapped[int] = mapped_column(ForeignKey("definitions.id"), nullable=False)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("TIMEZONE('utc', now())"))
+
+    user: Mapped[Users] = relationship()
+    definition: Mapped[Definition] = relationship()
