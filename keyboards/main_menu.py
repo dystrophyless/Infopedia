@@ -43,8 +43,8 @@ def build_main_menu_kb(i18n: dict) -> InlineKeyboardMarkup:
                 ),
                 InlineKeyboardButton(
                     text=i18n.get("search_button"),
-                    switch_inline_query_current_chat=""
+                    callback_data="search"
                 )
-            ]
+            ],
         ]
     )
