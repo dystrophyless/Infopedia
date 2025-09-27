@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(F.text == "👤 Профиль")
+@router.message(F.text == "👤 Профиль", StateFilter(default_state))
 async def process_profile_menu_button(
     message: Message,
     i18n: dict,
@@ -38,7 +38,7 @@ async def process_profile_menu_button(
     )
 
 
-@router.message(F.text == "🏠 Главная")
+@router.message(F.text == "🏠 Главная", StateFilter(default_state))
 async def process_main_menu_button(
     message: Message,
     i18n: dict,
