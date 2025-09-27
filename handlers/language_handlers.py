@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from filters.filters import LocaleFilter
 from keyboards.inline_keyboards import build_language_settings_kb
+from keyboards.main_menu import build_main_menu_kb
 from keyboards.menu_commands import get_main_menu_commands
 from fsm.states import FSMLanguage
 from database.db import get_user_language, get_user_role, update_user_language
@@ -66,7 +67,7 @@ async def process_language_command(
     await state.update_data(language_settings_msg_id=msg.message_id, user_language=user_language)
 
 
-@router.callback_query(F.data == "save_language_button_data")
+@router.callback_query(F.data == "save_language_button_data", FSMLanguage.choose_language)
 async def process_save_click(
     callback: CallbackQuery,
     bot: Bot,
@@ -92,7 +93,7 @@ async def process_save_click(
     await state.set_state()
 
 
-@router.callback_query(F.data == "cancel_language_button_data")
+@router.callback_query(F.data == "cancel_language_button_data", FSMLanguage.choose_language)
 async def process_cancel_click(
     callback: CallbackQuery,
     i18n: dict,
@@ -108,14 +109,14 @@ async def process_cancel_click(
 
     await callback.message.edit_text(
         text=i18n.get("main_menu").format(total_users_count, total_terms_count, i18n.get(user_role)),
-        callback_query="go_to_main_menu"
+        reply_markup=build_main_menu_kb(i18n)
     )
 
-    await state.update_data(language_settings_msg_id=None, user_language=None)
+    await state.update_data(language_settings_msg_id=None, user_language=None, user_role=user_role)
     await state.set_state()
 
 
-@router.callback_query(LocaleFilter())
+@router.callback_query(LocaleFilter(), FSMLanguage.choose_language)
 async def process_language_click(
     callback: CallbackQuery,
     i18n: dict,
