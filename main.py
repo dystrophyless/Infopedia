@@ -16,9 +16,10 @@ from logs.logging_settings import logging_config
 from config_data.config import Config, load_config
 from handlers import register_handlers, language_handlers, user_handlers, admin_handlers, inline_handlers, menu_handlers
 from i18n.translator import get_translations
-from database.connection import get_async_engine, get_sessionmaker, init_extensions
+from database.connection import get_async_engine, get_sessionmaker, init_similarity_extension
 from database.db import get_total_users, get_total_terms
 from database.loader import load_terms_from_json
+from services.nlp import embedder, reranker
 
 from middlewares.throttler import ThrottlingMiddleware
 from middlewares.database import DatabaseMiddleware
@@ -72,10 +73,10 @@ async def main() -> None:
     sessionmaker = get_sessionmaker(engine)
 
     async with sessionmaker() as session:
-        await load_terms_from_json(session, "database/terms.json")
+        await load_terms_from_json(session, embedder, "database/terms.json")
         logger.debug("Термины успешно загружены в БД")
 
-    await init_extensions(engine)
+    await init_similarity_extension(engine)
 
     total_users_count: int = await get_total_users(sessionmaker)
     total_terms_count: int = await get_total_terms(sessionmaker)
@@ -105,6 +106,8 @@ async def main() -> None:
     dp["admin_ids"] = config.bot.admin_ids
     dp["group_id"] = config.bot.group_id
     dp["sessionmaker"] = sessionmaker
+    dp["embedder"] = embedder
+    dp["reranker"] = reranker
     dp["total_users_count"] = total_users_count
     dp["total_terms_count"] = total_terms_count
     dp["translations"] = translations
