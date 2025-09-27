@@ -5,7 +5,7 @@ from sqlalchemy import select
 from database.models import Term, Source, Definition
 
 
-async def load_terms_from_json(session: AsyncSession, json_path: str):
+async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -42,11 +42,14 @@ async def load_terms_from_json(session: AsyncSession, json_path: str):
                 definition = result.scalar_one_or_none()
 
                 if not definition:
+                    emb = embedder.encode(d["definition"]).tolist()
+
                     definition = Definition(
                         text=d["definition"],
                         topic=d.get("topic"),
                         page=d.get("page"),
                         source=source,
+                        embedding=emb
                     )
                     session.add(definition)
 
