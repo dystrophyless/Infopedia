@@ -2,7 +2,6 @@ import logging
 
 from html import escape
 from contextlib import suppress
-from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from aiogram import Router, Bot, F
 from aiogram.enums import BotCommandScopeType
@@ -19,9 +18,10 @@ from keyboards.main_menu import build_menu_kb, build_main_menu_kb
 from keyboards.menu_commands import get_main_menu_commands
 from services.signature import verify_payload
 from services.terms import get_term_info
+from services.definition_search_service import DefinitionSearchService
 from utils.callback_factories import TermCallback
 from database.models import Term, Source, Definition
-from database.db import get_user_role, get_term_by_name, get_term_by_id, get_source_by_id, get_closest_definition, add_search_feedback
+from database.db import get_user_role, get_term_by_name, get_term_by_id, get_source_by_id, add_search_feedback
 from fsm.states import FSMSearch
 from enums.roles import UserRole
 
@@ -44,10 +44,11 @@ async def process_start_command(
     )
 
     user_role: str = await state.get_value("user_role")
-    user_role: UserRole = UserRole(user_role)
 
     if user_role is None:
         user_role: UserRole = await get_user_role(session, user_id=message.from_user.id)
+    else:
+        user_role: UserRole = UserRole(user_role)
 
     await bot.set_my_commands(
         commands=get_main_menu_commands(i18n=i18n, role=user_role),
@@ -116,19 +117,20 @@ async def process_going_back_to_main_menu(
     await state.set_state()
 
 
-@router.message(StateFilter(FSMSearch.await_definition_to_recognize), F.text.regexp(r"^(?:\S+\s+){2,}\S+"))
+@router.message(StateFilter(FSMSearch.await_definition_to_recognize), F.text.regexp(r"^\S+(?:\s+\S+)+$"))
 async def process_appropriate_definition(
     message: Message,
     i18n: dict,
     state: FSMContext,
     session: AsyncSession,
-    embedder: SentenceTransformer,
-    reranker: CrossEncoder
+    definition_search_service: DefinitionSearchService,
 ):
-    definition: Definition = await get_closest_definition(session, embedder, reranker, query=message.text)
+    definition: Definition = await definition_search_service.find_best(session, query=message.text)
 
     if definition is None:
         await message.answer(text=i18n.get("definition_was_not_found"))
+
+        await state.set_state()
     else:
         source: Source = definition.source
         term: Term = definition.source.term
