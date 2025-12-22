@@ -20,6 +20,7 @@ from database.connection import get_async_engine, get_sessionmaker, init_similar
 from database.db import get_total_users, get_total_terms
 from database.loader import load_terms_from_json
 from services.nlp import embedder, reranker
+from services.definition_search_service import DefinitionSearchService
 
 from middlewares.throttler import ThrottlingMiddleware
 from middlewares.database import DatabaseMiddleware
@@ -78,6 +79,8 @@ async def main() -> None:
 
     await init_similarity_extension(engine)
 
+    definition_search_service: DefinitionSearchService = DefinitionSearchService(embedder, reranker)
+
     total_users_count: int = await get_total_users(sessionmaker)
     total_terms_count: int = await get_total_terms(sessionmaker)
 
@@ -106,8 +109,7 @@ async def main() -> None:
     dp["admin_ids"] = config.bot.admin_ids
     dp["group_id"] = config.bot.group_id
     dp["sessionmaker"] = sessionmaker
-    dp["embedder"] = embedder
-    dp["reranker"] = reranker
+    dp["definition_search_service"] = definition_search_service
     dp["total_users_count"] = total_users_count
     dp["total_terms_count"] = total_terms_count
     dp["translations"] = translations
