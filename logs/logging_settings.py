@@ -67,7 +67,32 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
-        'database.db': {
+        'database.db_users': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'database.db_terms': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'database.db_statistics': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'database.db_search': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'database.db_counters': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'database.db_feedback': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
@@ -118,6 +143,11 @@ logging_config = {
             'propagate': False
         },
         'services.signature': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'services.definition_search_service': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
