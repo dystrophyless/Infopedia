@@ -67,7 +67,7 @@ class Definition(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     topic: Mapped[str] = mapped_column(String(255))
     page: Mapped[int] = mapped_column(Integer)
-    embedding: Mapped[list[float]] = mapped_column(Vector(768))
+    embedding: Mapped[list[float]] = mapped_column(Vector(1024))
 
     source: Mapped[Source] = relationship(back_populates="definitions", lazy="selectin")
 
