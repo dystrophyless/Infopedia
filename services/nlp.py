@@ -1,4 +1,8 @@
 from sentence_transformers import SentenceTransformer, CrossEncoder
+import torch
 
-embedder: SentenceTransformer = SentenceTransformer("paraphrase-multilingual-mpnet-base-v2")
-reranker: CrossEncoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+embedder = SentenceTransformer("BAAI/bge-m3", device=device)
+
+reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", device=device)
