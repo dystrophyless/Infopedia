@@ -22,6 +22,11 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
+        'filters.filters': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
         'handlers.register_handlers': {
             'level': 'DEBUG',
             'handlers': ['default'],
@@ -147,7 +152,17 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
-        'services.definition_search_service': {
+        'services.definition_service': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'services.notification_service': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'services.term_service': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
