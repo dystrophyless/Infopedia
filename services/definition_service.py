@@ -15,23 +15,23 @@ def _scaled_sigmoid(x: float, temperature: float = 0.5) -> float:
         return 0.0 if x < 0 else 1.0
 
 
-class DefinitionSearchService:
+class DefinitionService:
     def __init__(self, embedder, reranker):
         self.embedder = embedder
         self.reranker = reranker
 
     async def find_best(
-            self,
-            session: AsyncSession,
-            *,
-            query: str,
-            top_k: int = 30,
-            alpha: float = 0.75,
-            combined_threshold: float = 0.55,
-            margin_threshold: float = 0.05,
-            exact_fallback_threshold: float = 0.85,
-            use_adaptive_alpha: bool = True,
-            min_candidates_for_decision: int = 3,
+        self,
+        session: AsyncSession,
+        *,
+        query: str,
+        top_k: int = 30,
+        alpha: float = 0.75,
+        combined_threshold: float = 0.55,
+        margin_threshold: float = 0.05,
+        exact_fallback_threshold: float = 0.85,
+        use_adaptive_alpha: bool = True,
+        min_candidates_for_decision: int = 3,
     ):
         # 1. Эмбеддинг
         try:
