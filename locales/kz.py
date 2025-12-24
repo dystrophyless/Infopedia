@@ -71,10 +71,11 @@ KZ: dict[str, str] = {
     "find_term_by_name": "🔍 Атауы бойынша",
     "find_term_by_definition": "🧭 Анықтамасы бойынша",
     "get_random_term_button": "🎲 Кездейсоқ термин",
+    "repeat_search_definition": "🔁 Тағы бір рет көру",
 
     "await_definition_to_recognize": "🧭 Сіз терминді жуық анықтамасы енгізу арқылы табуды таңдадыңыз.\n\n"
                                "✍🏻 Сіз іздеген терминнің жуық анықтамасын чатқа жазыңыз, ал біздің бот оны табуға тырысады",
-
+    "awaiting_response": "⏳ Күте тұрыңыз...",
     "definition_was_not_found": "❌ Сіз жіберген анықтамаға ұқсас анықтама таба алмадық.",
     "definition_was_found": "✅ Сіз жіберген анықтамаға ұқсас анықтаманы табылды!",
     "definition_representation": "📌 <b>{}</b>\n\n"
