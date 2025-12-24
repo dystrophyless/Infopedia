@@ -143,6 +143,18 @@ def build_considering_definition_kb(i18n: dict) -> InlineKeyboardMarkup:
     )
 
 
+def build_repeating_search_definition_kb(i18n: dict) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=i18n.get("repeat_search_definition"),
+                    callback_data="find_term_by_definition"
+                )
+            ]
+        ]
+    )
+
 
 
 def build_suggestion_kb(i18n: dict, suggested_term: str) -> InlineKeyboardMarkup:
@@ -243,5 +255,3 @@ def build_sources_kb(
             kb_builder.row(*nav_row)
 
     return kb_builder.as_markup()
-
-
