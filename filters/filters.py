@@ -1,3 +1,5 @@
+import logging
+
 from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery, Message
 
@@ -5,6 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from enums.roles import UserRole
 from database.db import get_user_role
+from services.signature import verify_payload
+
+logger = logging.getLogger(__name__)
+
 
 class LocaleFilter(BaseFilter):
     async def __call__(self, callback: CallbackQuery, locales: list):
@@ -39,3 +45,27 @@ class UserRoleFilter(BaseFilter):
             return False
 
         return role in self.roles
+
+
+class ActionPayloadFilter(BaseFilter):
+    def __init__(self, action: str):
+        self.action = action
+
+    async def __call__(self, message: Message):
+        if not message.text or not message.text.startswith(self.action):
+            return False
+
+        payload = verify_payload(message.text)
+
+        username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
+
+        await message.delete()
+
+        if payload is None:
+            logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
+            return False
+
+        if payload.get("action") != self.action:
+            return False
+
+        return {"payload": payload}
