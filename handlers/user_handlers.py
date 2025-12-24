@@ -1,6 +1,5 @@
 import logging
 
-from html import escape
 from contextlib import suppress
 
 from aiogram import Router, Bot, F
@@ -13,17 +12,18 @@ from aiogram.exceptions import TelegramBadRequest
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from keyboards.inline_keyboards import build_search_kb, build_suggestion_kb, build_suggestion_decision_kb, build_considering_definition_kb
+from keyboards.inline_keyboards import build_search_kb, build_suggestion_kb, build_considering_definition_kb, build_repeating_search_definition_kb
 from keyboards.main_menu import build_menu_kb, build_main_menu_kb
 from keyboards.menu_commands import get_main_menu_commands
-from services.signature import verify_payload
-from services.terms import get_term_info
-from services.definition_search_service import DefinitionSearchService
+from services.definition_service import DefinitionService
+from services.term_service import TermService
+from services.notification_service import NotificationService
 from utils.callback_factories import TermCallback
 from database.models import Term, Source, Definition
-from database.db import get_user_role, get_term_by_name, get_term_by_id, get_source_by_id, add_search_feedback
+from database.db import get_user_role, add_search_feedback
 from fsm.states import FSMSearch
 from enums.roles import UserRole
+from filters.filters import ActionPayloadFilter
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +89,19 @@ async def process_search_button(
 async def process_find_term_by_definition(
     callback: CallbackQuery,
     i18n: dict,
-    state: FSMContext
+    state: FSMContext,
+    bot: Bot
 ):
+    msg_id = await state.get_value("consider_definition_msg_id")
+    if msg_id:
+        await bot.edit_message_reply_markup(
+            chat_id=callback.from_user.id,
+            message_id=msg_id,
+            reply_markup=None
+        )
+
+    await state.update_data(consider_definition_msg_id=None)
+
     await callback.message.answer(
         text=i18n.get("await_definition_to_recognize"),
     )
@@ -121,29 +132,43 @@ async def process_going_back_to_main_menu(
 async def process_appropriate_definition(
     message: Message,
     i18n: dict,
+    bot: Bot,
     state: FSMContext,
     session: AsyncSession,
-    definition_search_service: DefinitionSearchService,
+    definition_service: DefinitionService,
 ):
-    definition: Definition = await definition_search_service.find_best(session, query=message.text)
+    msg = await message.answer(text=i18n.get("awaiting_response"))
+
+    definition: Definition = await definition_service.find_best(session, query=message.text)
 
     if definition is None:
-        await message.answer(text=i18n.get("definition_was_not_found"))
+        msg = await bot.edit_message_text(
+            text=i18n.get("definition_was_not_found"),
+            reply_markup=build_repeating_search_definition_kb(i18n),
+            chat_id=message.from_user.id,
+            message_id=msg.message_id
+        )
 
         await state.set_state()
     else:
         source: Source = definition.source
         term: Term = definition.source.term
 
-        await message.answer(text=i18n.get("definition_was_found"))
-        await message.answer(text=i18n.get("definition_representation").format(term.name, definition.text, source.name, definition.topic, definition.page))
+        await bot.edit_message_text(
+            text=i18n.get("definition_representation").format(term.name, definition.text, source.name, definition.topic, definition.page),
+            chat_id=message.from_user.id,
+            message_id=msg.message_id
+        )
+
         msg = await message.answer(
             text=i18n.get("consider_definition"),
             reply_markup=build_considering_definition_kb(i18n)
         )
 
-        await state.update_data(query=message.text, definition_id=definition.id, consider_definition_msg_id=msg.message_id)
+        await state.update_data(query=message.text, definition_id=definition.id)
         await state.set_state(FSMSearch.await_considering_definition)
+
+    await state.update_data(consider_definition_msg_id=msg.message_id)
 
 
 @router.message(StateFilter(FSMSearch.await_definition_to_recognize))
@@ -167,11 +192,14 @@ async def process_definition_was_exact(
     definition_id: int = await state.get_value("definition_id")
     query: str = await state.get_value("query")
 
-    await callback.message.edit_text(text=i18n.get("exact_definition_feedback"))
+    await callback.message.edit_text(
+        text=i18n.get("exact_definition_feedback"),
+        reply_markup=build_repeating_search_definition_kb(i18n)
+    )
 
     await add_search_feedback(session, user_id=callback.from_user.id, definition_id=definition_id, query=query, correct=True)
 
-    await state.update_data(consider_definition_msg_id=None, definition_id=None, query=None)
+    await state.update_data(definition_id=None, query=None)
     await state.set_state()
 
 
@@ -185,11 +213,14 @@ async def process_definition_was_exact(
     definition_id: int = await state.get_value("definition_id")
     query: str = await state.get_value("query")
 
-    await callback.message.edit_text(text=i18n.get("not_exact_definition_feedback"))
+    await callback.message.edit_text(
+        text=i18n.get("not_exact_definition_feedback"),
+        reply_markup=build_repeating_search_definition_kb(i18n)
+    )
 
     await add_search_feedback(session, user_id=callback.from_user.id, definition_id=definition_id, query=query, correct=False)
 
-    await state.update_data(consider_definition_msg_id=None, definition_id=None, query=None)
+    await state.update_data(definition_id=None, query=None)
     await state.set_state()
 
 
@@ -213,36 +244,17 @@ async def process_failed_to_consider_definition(
     await state.update_data(consider_definition_msg_id=msg.message_id)
 
 
-@router.message(F.text.startswith("get_term_info"))
+@router.message(ActionPayloadFilter("get_term_info"))
 async def process_getting_term_info(
     message: Message,
     i18n: dict,
-    session: AsyncSession
+    session: AsyncSession,
+    payload: dict,
+    term_service: TermService
 ):
-    data = verify_payload(message.text)
+    text, kb = await term_service.get_term(session, term_name=payload["term"], i18n=i18n)
 
-    await message.delete()
-
-    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
-
-    if data is None:
-        logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
-        return
-
-    term: Term = await get_term_by_name(session, name=data["term"])
-
-    if term is None:
-        logger.debug("Не удалось найти термин `name=%s` в базе данных", term)
-        return
-
-    if data["action"] == "get_term_info":
-        text, kb = await get_term_info(term=term, i18n=i18n)
-
-        if text is None:
-            logger.debug("Не удалось найти термин `name=%s` в базе данных", data["term"])
-            return
-
-        await message.answer(text=text, reply_markup=kb)
+    await message.answer(text=text, reply_markup=kb)
 
 
 @router.callback_query(F.data == "noop")
@@ -253,29 +265,21 @@ async def process_answer_nothing(
     await callback.answer(text=i18n.get("noop"))
 
 
-@router.message(F.text.startswith("suggest_new_term"))
+@router.message(ActionPayloadFilter("suggest_new_term"))
 async def process_definition_suggestion(
     message: Message,
-    i18n: dict
+    i18n: dict,
+    payload: dict
 ):
-    data = verify_payload(message.text)
+    suggested_term: str = payload["term"]
 
-    await message.delete()
+    await message.answer(
+        text=i18n.get("suggest_new_term").format(suggested_term),
+        reply_markup=build_suggestion_kb(i18n, suggested_term)
+    )
 
     username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
-
-    if data is None:
-        logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
-        return
-
-    if data["action"] == "suggest_new_term":
-        suggested_term: str = data["term"]
-
-        await message.answer(
-            text=i18n.get("suggest_new_term").format(suggested_term),
-            reply_markup=build_suggestion_kb(i18n, suggested_term)
-        )
-        logger.debug(f"Пользователь {username} предложил следующий термин с `name`=`{suggested_term}`")
+    logger.debug(f"Пользователь {username} хочет предложить следующий термин с `name`=`{suggested_term}`")
 
 
 @router.callback_query(F.data.startswith("suggestion_positive_reply"))
@@ -286,25 +290,14 @@ async def process_suggestion_positive_reply(
     i18n: dict
 ):
     suggested_term: str = callback.data.split(":")[1]
-    username: str = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
-    exact_username: str = callback.from_user.username
 
     await callback.message.edit_text(
         text=i18n.get("suggestion_positive_reply").format(suggested_term)
     )
 
-    if exact_username:
-        link: str = f"https://t.me/{username}"
-        username: str = f"@{username}"
-    else:
-        link: str = f"tg://user?id={callback.from_user.id}"
+    await NotificationService.send_new_suggestion_alert(bot, callback.from_user, chat_id=group_id, term=suggested_term)
 
-    await bot.send_message(
-        chat_id=group_id,
-        text=f"📄 Было предложено добавить новый термин: <b>{suggested_term}</b>\n\n"
-             f"👤 От пользователя: <a href=\"{link}\">{escape(username)}</a>",
-        reply_markup=build_suggestion_decision_kb(callback.from_user.id)
-    )
+    username: str = callback.from_user.username if callback.from_user.username else callback.from_user.first_name
     logger.debug("Пользователь с `username`='%s' предложил следующий термин: %s", username, suggested_term)
 
 
@@ -318,17 +311,10 @@ async def process_definition_change(
     callback: CallbackQuery,
     callback_data: TermCallback,
     i18n: dict,
-    session: AsyncSession
+    session: AsyncSession,
+    term_service: TermService
 ):
-    term: Term = await get_term_by_id(session, id=callback_data.term_id)
-    source: Source = await get_source_by_id(session, id=callback_data.source_id)
-    index: int = callback_data.index
-
-    text, kb = await get_term_info(term=term, source=source, index=index, i18n=i18n)
-
-    if text is None:
-        logger.debug("Не удалось перейти к источнику/дефиниции у термина с `name`='%s'", term.name)
-        return
+    text, kb = await term_service.get_definition(session, term_id=callback_data.term_id, source_id=callback_data.source_id, index=callback_data.index, i18n=i18n)
 
     await callback.message.edit_text(
         text=text,
