@@ -18,6 +18,10 @@ class TermPresentationError(TermAppError):
     pass
 
 
+class NoSourcesFoundError(TermAppError):
+    pass
+
+
 class SecurityPayloadError(TermAppError):
     pass
 
