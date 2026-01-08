@@ -27,7 +27,7 @@ class TermService:
 
         text, kb = await get_term_info(term=term, i18n=i18n)
         if text is None:
-            logger.debug("Не удалось найти термин `name=%s` в базе данных", term)
+            logger.debug("Не удалось получить информацию о термине `name=%s` с помощью сервиса", term_name)
             raise TermPresentationError(term_name)
 
         return text, kb
@@ -50,7 +50,6 @@ class TermService:
             raise TermNotFoundByIdError(term_id)
 
         text, kb = await get_term_info(term=term, source=source, index=index, i18n=i18n)
-
         if text is None:
             logger.debug("Не удалось перейти к источнику/дефиниции у термина с `name`='%s'", term.name)
             raise TermPresentationError()
