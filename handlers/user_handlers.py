@@ -227,7 +227,6 @@ async def process_definition_was_exact(
     session: AsyncSession,
 ):
     correct = callback.data == "definition_was_exact"
-
     text_key = "exact_definition_feedback" if correct else "not_exact_definition_feedback"
 
     await callback.message.edit_text(
@@ -241,12 +240,6 @@ async def process_definition_was_exact(
         user_id=callback.from_user.id,
         correct=correct
     )
-
-    await state.update_data(
-        definition_id=None,
-        query=None
-    )
-    await state.set_state()
 
 @router.message(StateFilter(FSMSearch.await_considering_definition))
 async def process_failed_to_consider_definition(
