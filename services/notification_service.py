@@ -19,9 +19,9 @@ class NotificationService:
     @classmethod
     async def send_new_suggestion_alert(
         cls,
+        *,
         bot: Bot,
         user: User,
-        *,
         chat_id: str,
         term: str
     ):
@@ -33,7 +33,7 @@ class NotificationService:
         )
 
         await bot.send_message(
-            chat_id=chat_id,
             text=text,
+            chat_id=chat_id,
             reply_markup=build_suggestion_decision_kb(user.id)
         )
