@@ -76,8 +76,16 @@ async def process_save_click(
     session: AsyncSession
 ):
     data = await state.get_data()
-    await update_user_language(session, language=data.get("user_language"), user_id=callback.from_user.id)
-    await callback.message.edit_text(text=i18n.get("language_saved").format(i18n.get(data.get("user_language"))))
+    await update_user_language(
+        session,
+        language=data.get("user_language"),
+        user_id=callback.from_user.id
+    )
+    await callback.message.edit_text(
+        text=i18n.get("language_saved").format(
+            user_language=i18n.get(data.get("user_language"))
+        )
+    )
 
     user_role = await get_user_role(session, user_id=callback.from_user.id)
 
@@ -89,7 +97,10 @@ async def process_save_click(
         )
     )
 
-    await state.update_data(language_settings_msg_id=None, user_language=None)
+    await state.update_data(
+        language_settings_msg_id=None,
+        user_language=None
+    )
     await state.set_state()
 
 
@@ -102,17 +113,35 @@ async def process_cancel_click(
     state: FSMContext,
     session: AsyncSession
 ):
-    user_language: str = await get_user_language(session, user_id=callback.from_user.id)
-    user_role: str = await get_user_role(session, user_id=callback.from_user.id)
+    user_language: str = await get_user_language(
+        session,
+        user_id=callback.from_user.id
+    )
+    user_role: str = await get_user_role(
+        session,
+        user_id=callback.from_user.id
+    )
 
-    await callback.answer(text=i18n.get("language_cancelled").format(i18n.get(user_language)))
+    await callback.answer(
+        text=i18n.get("language_cancelled").format(
+            user_language=i18n.get(user_language)
+        )
+    )
 
     await callback.message.edit_text(
-        text=i18n.get("main_menu").format(total_users_count, total_terms_count, i18n.get(user_role)),
+        text=i18n.get("main_menu").format(
+            total_users=total_users_count,
+            total_terms=total_terms_count,
+            user_role=i18n.get(user_role)
+        ),
         reply_markup=build_main_menu_kb(i18n)
     )
 
-    await state.update_data(language_settings_msg_id=None, user_language=None, user_role=user_role)
+    await state.update_data(
+        language_settings_msg_id=None,
+        user_language=None,
+        user_role=user_role
+    )
     await state.set_state()
 
 
@@ -125,7 +154,11 @@ async def process_language_click(
     try:
         await callback.message.edit_text(
             text=i18n.get("/language"),
-            reply_markup=build_language_settings_kb(i18n=i18n, locales=locales, checked=callback.data)
+            reply_markup=build_language_settings_kb(
+                i18n=i18n,
+                locales=locales,
+                checked=callback.data
+            )
         )
     except TelegramBadRequest:
         await callback.answer()

@@ -43,11 +43,11 @@ async def process_admin_statistics_command(
     if statistics:
         await message.answer(
             text=i18n.get("/stats").format(
-                "\n".join(
+                info_rows="\n".join(
                     f"{i}. {stat.link}: {stat.total_actions}"
                     for i, stat in enumerate(statistics, 1)
                 ),
-                total_actions
+                total_actions=total_actions
             )
         )
     else:
@@ -66,16 +66,18 @@ async def process_admin_feedback_command(
     if statistics:
         await message.answer(
             text=i18n.get("/feedback").format(
-                "\n".join(
+                info_rows="\n".join(
                     f"{i}. №{feedback.definition_id}: {feedback.short_term_name} [{feedback.correct_queries}/{feedback.total_queries}] (~{feedback.accuracy}%)"
                     for i, feedback in enumerate(statistics, 1)
                 ),
-                total_queries,
-                f"~{total_accuracy}%"
+                total_queries=total_queries,
+                total_accuracy=f"~{total_accuracy}%"
             )
         )
     else:
-        await message.answer(text=i18n.get("feedback_was_not_found"))
+        await message.answer(
+            text=i18n.get("feedback_was_not_found")
+        )
 
 
 @router.message(Command(commands=["ban"]))
