@@ -29,11 +29,21 @@ async def process_profile_menu_button(
     await message.delete()
 
     username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
-    user_language: str = await get_user_language(session, user_id=message.from_user.id)
-    user_role: str = await get_user_role(session, user_id=message.from_user.id)
+    user_language: str = await get_user_language(
+        session,
+        user_id=message.from_user.id
+    )
+    user_role: str = await get_user_role(
+        session,
+        user_id=message.from_user.id
+    )
 
     await message.answer(
-        text=i18n.get("profile_menu").format(username, i18n.get(user_language), i18n.get(user_role)),
+        text=i18n.get("profile_menu").format(
+            username=username,
+            user_language=i18n.get(user_language),
+            user_role=i18n.get(user_role)
+        ),
         reply_markup=build_profile_menu_kb(i18n)
     )
 
@@ -48,10 +58,17 @@ async def process_main_menu_button(
 ):
     await message.delete()
 
-    user_role: str = await get_user_role(session, user_id=message.from_user.id)
+    user_role: str = await get_user_role(
+        session,
+        user_id=message.from_user.id
+    )
 
     await message.answer(
-        text=i18n.get("main_menu").format(total_users_count, total_terms_count, i18n.get(user_role)),
+        text=i18n.get("main_menu").format(
+            total_users=total_users_count,
+            total_terms=total_terms_count,
+            user_role=i18n.get(user_role)
+        ),
         reply_markup=build_main_menu_kb(i18n)
     )
 
@@ -64,8 +81,14 @@ async def process_get_random_term_button(
 ):
     random_term: Term = (await get_random_terms(session, quantity=1))[0]
 
-    text, kb = await get_term_info(term=random_term, i18n=i18n)
+    text, kb = await get_term_info(
+        term=random_term,
+        i18n=i18n
+    )
 
-    await callback.message.answer(text=text, reply_markup=kb)
+    await callback.message.answer(
+        text=text,
+        reply_markup=kb
+    )
     await callback.answer()
 

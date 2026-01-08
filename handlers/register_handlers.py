@@ -40,14 +40,18 @@ async def process_start_registration(
             reply_markup=build_language_kb(i18n)
         )
         await state.set_state(FSMRegister.choose_language)
-        await state.update_data(registration_msg_id=msg.message_id)
+        await state.update_data(
+            registration_msg_id=msg.message_id
+        )
     else:
         msg = await message.answer(
             text=i18n.get("await_membership"),
             reply_markup=build_channel_kb(i18n, channel_link)
         )
         await state.set_state(FSMRegister.await_membership)
-        await state.update_data(await_membership_msg_id=msg.message_id)
+        await state.update_data(
+            await_membership_msg_id=msg.message_id
+        )
 
     username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
     logger.debug("Пользователь с `username`='%s' начал проходить этап регистрации", username)
@@ -67,22 +71,24 @@ async def process_channel_link_press(
     if await is_user_followed(bot, callback.from_user.id, channel_id):
         logger.debug("Пользователь с `username`='%s' был подписан на наш канал, ожидаем выбор языка", username)
         await callback.answer()
-        await callback.message.edit_text(text=i18n.get("successful_membership"))
+        await callback.message.edit_text(
+            text=i18n.get("successful_membership")
+        )
 
         msg_id = await callback.message.answer(
             text=i18n.get("choose_language"),
             reply_markup=build_language_kb(i18n)
         )
         await state.set_state(FSMRegister.choose_language)
-        await state.update_data(registration_msg_id=msg_id.message_id)
+        await state.update_data(
+            registration_msg_id=msg_id.message_id
+        )
     else:
         logger.debug("Пользователь с `username`='%s' не был подписан на наш канал, ожидем подписку", username)
         await callback.answer(
             text=i18n.get("unsuccessful_membership"),
             show_alert=True
         )
-
-
 
 
 @router.message(StateFilter(FSMRegister.await_membership))
@@ -116,7 +122,9 @@ async def process_choosing_language(
     i18n: dict
 ):
     await callback.message.edit_text(
-        text=i18n.get("choose_grade").format(i18n.get(callback.data)),
+        text=i18n.get("choose_grade").format(
+            user_language=i18n.get(callback.data)
+        ),
         reply_markup=build_grade_kb(i18n)
     )
     await state.set_state(FSMRegister.choose_grade)
@@ -181,10 +189,15 @@ async def process_choosing_grade(
     )
 
     await callback.message.edit_text(
-        text=i18n.get("finish_registration").format(i18n.get(callback.data))
+        text=i18n.get("finish_registration").format(
+            user_grade=i18n.get(callback.data)
+        )
     )
 
-    await state.update_data(user_role=None, user_language=None)
+    await state.update_data(
+        user_role=None,
+        user_language=None
+    )
     await state.set_state()
 
     await asyncio.sleep(3)
@@ -196,9 +209,9 @@ async def process_choosing_grade(
         reply_markup=build_menu_kb(i18n)
     )
 
-    await state.update_data(registration_msg_id=msg_id.message_id)
-
-
+    await state.update_data(
+        registration_msg_id=msg_id.message_id
+    )
 
 
 @router.message(StateFilter(FSMRegister.choose_grade))
@@ -213,15 +226,22 @@ async def process_failed_to_choose_grade(
     with suppress(TelegramBadRequest):
         msg_id = await state.get_value("registration_msg_id")
         if msg_id:
-            await bot.delete_message(chat_id=user_id, message_id=msg_id)
+            await bot.delete_message(
+                chat_id=user_id,
+                message_id=msg_id
+            )
 
     user_language = await state.get_value("user_language")
 
     msg_id = await message.answer(
-        text=i18n.get("choose_grade").format(i18n.get(user_language)),
+        text=i18n.get("choose_grade").format(
+            user_language=i18n.get(user_language)
+        ),
         reply_markup=build_grade_kb(i18n)
     )
 
-    await state.update_data(registration_msg_id=msg_id.message_id)
+    await state.update_data(
+        registration_msg_id=msg_id.message_id
+    )
 
 
