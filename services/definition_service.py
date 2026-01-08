@@ -1,14 +1,20 @@
 import math
 import numpy as np
 import logging
+import asyncio
+from typing import Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db_search import get_definition_candidates
+from database.models import Definition
 
 logger = logging.getLogger(__name__)
 
 
-def _scaled_sigmoid(x: float, temperature: float = 0.5) -> float:
+def _scaled_sigmoid(
+    x: float,
+    temperature: float = 0.5
+) -> float:
     try:
         return 1.0 / (1.0 + math.exp(-x * temperature))
     except (OverflowError, ValueError):
@@ -16,7 +22,11 @@ def _scaled_sigmoid(x: float, temperature: float = 0.5) -> float:
 
 
 class DefinitionService:
-    def __init__(self, embedder, reranker):
+    def __init__(
+        self,
+        embedder,
+        reranker
+    ):
         self.embedder = embedder
         self.reranker = reranker
 
@@ -32,27 +42,49 @@ class DefinitionService:
         exact_fallback_threshold: float = 0.85,
         use_adaptive_alpha: bool = True,
         min_candidates_for_decision: int = 3,
-    ):
-        # 1. Эмбеддинг
+        on_stage: Callable | None = None
+    ) -> Definition | None:
+
+        async def stage(name: str):
+            if on_stage:
+                await on_stage(name)
+                await asyncio.sleep(1.2)
+
+        # --- 1. Эмбеддинг ---
+        await stage("embedding")
+
         try:
-            qvec = self.embedder.encode(query, convert_to_numpy=True, normalize_embeddings=True)
+            # безопасный вызов encode в отдельном потоке
+            def encode_sync(q):
+                return self.embedder.encode(
+                    q,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True
+                )
+
+            qvec = await asyncio.to_thread(encode_sync, query)
+
         except Exception:
             logger.exception("Ошибка эмбеддинга")
             return None
 
         qvec = np.asarray(qvec).ravel()
-        if np.isnan(qvec).any(): return None
+        if np.isnan(qvec).any():
+            return None
 
-        # 2. Поиск в БД
+        await asyncio.sleep(0)  # даём шанс event loop переключиться
+
+        # --- 2. SQL поиск ---
+        await stage("searching")
         try:
             rows = await get_definition_candidates(session, qvec.tolist(), top_k=top_k)
         except Exception:
             logger.exception("Ошибка SQL")
             return None
-
         if not rows: return None
+        await asyncio.sleep(0)
 
-        # 3. Exact Similarity
+        # --- остальной код без изменений ---
         candidates, texts = [], []
         for definition, _ in rows:
             emb_raw = definition.embedding
@@ -65,19 +97,22 @@ class DefinitionService:
 
         if len(candidates) < min_candidates_for_decision: return None
 
-        # 4. Reranking
+        # --- 3. Реранкинг ---
+        await stage("reranking")
         try:
-            rerank_raw = self.reranker.predict([(query, t) for t in texts])
+            rerank_raw = await asyncio.to_thread(
+                self.reranker.predict,
+                [(query, t) for t in texts]
+            )
             rerank_raw = np.asarray(rerank_raw, dtype=float).ravel()
         except Exception:
             logger.exception("Ошибка реранкера")
             rerank_raw = np.zeros(len(candidates))
+        await asyncio.sleep(0)
 
-        # 5. Нормализация
         exact_norm = np.clip([c[1] for c in candidates], 0.0, 1.0)
         rerank_norm = np.array([_scaled_sigmoid(x) for x in rerank_raw])
 
-        # 6. Adaptive Alpha
         if use_adaptive_alpha:
             top_vec_idx = np.argsort(exact_norm)[-5:][::-1]
             top_rer_idx = np.argsort(rerank_norm)[-5:][::-1]
@@ -86,7 +121,6 @@ class DefinitionService:
         else:
             adaptive_alpha = alpha
 
-        # 7. Keyword Bonus
         query_words = set(query.lower().split())
         keyword_bonus = np.zeros(len(candidates))
         for i, (definition, _) in enumerate(candidates):
@@ -99,7 +133,6 @@ class DefinitionService:
             except:
                 pass
 
-        # 8. Сбор и Группировка
         combined = (adaptive_alpha * rerank_norm) + ((1.0 - adaptive_alpha) * exact_norm) + keyword_bonus
         enriched = []
         for i, (definition, _) in enumerate(candidates):
@@ -121,13 +154,10 @@ class DefinitionService:
                 unique_terms.append(item)
                 seen_ids.add(tid)
 
-        # --- КОРРЕКЦИЯ ЛИДЕРА (Rerank Rescue) ---
-        # Если в топ-10 сидит явный лидер по реранку (как CMOS), вытягиваем его
         if len(unique_terms) > 1:
             best_by_rerank = max(unique_terms[:10], key=lambda x: x["rerank_raw"])
             current_top = unique_terms[0]
 
-            # Если кандидат с лучшим реранком имеет балл > 0.85 и он не на 1 месте
             if best_by_rerank["rerank_raw"] > 0.85 and best_by_rerank != current_top:
                 logger.debug("--- Rerank Rescue Triggered ---")
                 logger.debug("Moving `%s` (raw: %.4f) above `%s` (raw: %.4f)",
@@ -141,7 +171,10 @@ class DefinitionService:
         second = unique_terms[1] if len(unique_terms) > 1 else None
         margin = best["combined"] - second["combined"] if second else 1.0
 
-        # --- ЛОГИРОВАНИЕ ---
+        # --- 4. Финальная стадия ---
+        await stage("deciding")
+        await asyncio.sleep(0)
+
         logger.debug("Query: %r | Alpha: %.2f", query, adaptive_alpha)
         logger.debug("Top Candidates:")
         for idx, info in enumerate(unique_terms[:10], start=1):
@@ -149,18 +182,14 @@ class DefinitionService:
                          idx, info["definition"].source.term.name[:30],
                          info["exact_norm"], info["rerank_raw"], info["combined"])
 
-        # --- 9. ПРИНЯТИЕ РЕШЕНИЯ ---
-        # 1. Доверие реранку после Rescue
         if best["rerank_raw"] > 0.83:
             logger.debug("Decision: Принято по высокому реранку (%.4f)", best["rerank_raw"])
             return best["definition"]
 
-        # 2. Инверсия (если #2 всё ещё намного лучше по тексту)
         if second and second["rerank_raw"] > (best["rerank_raw"] + 0.15):
             logger.debug("Decision: Override в пользу #2")
             return second["definition"]
 
-        # 3. Стандартные фильтры
         if best["combined"] > combined_threshold:
             if margin >= margin_threshold or best["combined"] > 0.63:
                 logger.debug("Decision: Принято по Combined/Margin (%.4f)", best["combined"])
@@ -168,3 +197,25 @@ class DefinitionService:
 
         logger.debug("Decision: Отклонено (Margin: %.4f, Combined: %.4f)", margin, best["combined"])
         return None
+
+    async def get_search_result(
+        self,
+        session: AsyncSession,
+        *,
+        query: str,
+        on_stage: Callable | None = None
+    ) -> tuple[Definition, dict] | tuple[None, None]:
+        definition: Definition = await self.find_best(session, query=query, on_stage=on_stage)
+
+        if not definition:
+            return None, None
+
+        info: dict = {
+            "term": definition.source.term.name,
+            "source": definition.source.name,
+            "text": definition.text,
+            "topic": definition.topic,
+            "page": definition.page
+        }
+
+        return definition, info
