@@ -28,8 +28,6 @@ class ShadowBanMiddleware(BaseMiddleware):
 
         db_user: Users = data.get("db_user")
 
-
-
         if db_user is None:
             logger.debug("Данные о пользователе с с `username`='%s' не удалось получить из базы данных", username)
             return await handler(event, data)
