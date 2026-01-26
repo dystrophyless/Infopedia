@@ -25,5 +25,5 @@ class FeedbackService:
             correct=correct
         )
 
-        await state.update_data(definition_id=None, query=None)
+        await state.update_data(definition_id=None, query=None, from_menu=None)
         await state.set_state()
