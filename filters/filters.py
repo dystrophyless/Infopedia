@@ -2,11 +2,12 @@ import logging
 
 from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery, Message
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from enums.roles import UserRole
+from enums.features import Feature
 from database.db import get_user_role
+from services.feature_usage import is_user_allowed_to_use_feature
 from services.signature import verify_payload
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,8 @@ class UserRoleFilter(BaseFilter):
         if not user:
             return False
 
-        role = await get_user_role(session, user_id=user.id)
+        role: UserRole = await get_user_role(session, user_id=user.id)
+
         if role is None:
             return False
 
@@ -48,18 +50,17 @@ class UserRoleFilter(BaseFilter):
 
 
 class ActionPayloadFilter(BaseFilter):
-    def __init__(self, action: str):
+    def __init__(self, action: str, usage_limit: int = 1):
         self.action = action
+        self.usage_limit = usage_limit
 
     async def __call__(self, message: Message):
         if not message.text or not message.text.startswith(self.action):
             return False
 
-        payload = verify_payload(message.text)
+        payload = verify_payload(message.text, self.usage_limit)
 
         username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
-
-        await message.delete()
 
         if payload is None:
             logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
@@ -68,4 +69,45 @@ class ActionPayloadFilter(BaseFilter):
         if payload.get("action") != self.action:
             return False
 
+        await message.delete()
         return {"payload": payload}
+
+
+class MenuFilter(BaseFilter):
+    def __init__(self, filter_text: str | None = None):
+        self.filter_text = filter_text
+
+    async def __call__(self, event: Message | CallbackQuery):
+        if isinstance(event, CallbackQuery):
+            if event.data == self.filter_text:
+                return await event.answer()
+
+        if isinstance(event, Message):
+            if event.text == self.filter_text:
+                return await event.delete()
+
+        return False
+
+
+class FeatureAccessFilter(BaseFilter):
+    def __init__(self, feature: Feature):
+        self.feature = feature
+
+    async def __call__(self, event: Message | CallbackQuery, session: AsyncSession):
+        user_id: int = event.from_user.id
+
+        is_allowed, usage_count = await is_user_allowed_to_use_feature(
+            session=session,
+            user_id=user_id,
+            feature=self.feature,
+        )
+
+        if is_allowed:
+            logger.debug("Пользователю с `user_id`='%d' разрешено использовать фичу с `feature_name`='%s' (%d/%d попыток)", user_id,
+                     self.feature.name, usage_count, self.feature.limit)
+            return True
+
+        logger.warning("Пользователю с `user_id`='%d' запрещено использовать фичу с `feature_name`='%s' из-за превышения лимита использования", user_id,
+                       self.feature.name)
+
+        return False
