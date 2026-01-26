@@ -48,7 +48,6 @@ class DefinitionService:
         async def stage(name: str):
             if on_stage:
                 await on_stage(name)
-                await asyncio.sleep(1.2)
 
         # --- 1. Эмбеддинг ---
         await stage("embedding")
