@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from services.mention import get_user_link
 
 @dataclass
 class UserStat:
@@ -9,7 +10,4 @@ class UserStat:
 
     @property
     def link(self) -> str:
-        if self.username:
-            return f"<a href=\"https://t.me/{self.username}\">@{self.username}</a>"
-
-        return f"<a href=\"tg://user?id={self.user_id}\">{self.first_name}</a>"
+        return get_user_link(user_id=self.user_id, username=self.username, first_name=self.first_name)
