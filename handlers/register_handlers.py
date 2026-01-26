@@ -6,7 +6,7 @@ from aiogram import Router, Bot, F
 from aiogram.enums import BotCommandScopeType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
-from aiogram.filters import Command, StateFilter, MagicData
+from aiogram.filters import StateFilter, MagicData
 from aiogram.fsm.context import FSMContext
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(Command(commands=["start"]), MagicData(F.start_registration))
+@router.message(MagicData(F.start_registration))
 async def process_start_registration(
     message: Message,
     bot: Bot,
