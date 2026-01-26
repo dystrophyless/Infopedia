@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.models import Term, Source, Definition
+from database.models import Term, Source
 from utils.callback_factories import TermCallback
 from enums.grades import UserGrade
 
@@ -49,11 +49,11 @@ def build_language_settings_kb(i18n: dict, locales: list[str], checked: str) -> 
     buttons.append(
         [
             InlineKeyboardButton(
-                text=i18n.get("back_to_main_menu"),
-                callback_data="cancel_language_button_data"
+                text=i18n.get("back_to_profile_menu_button"),
+                callback_data="back_to_profile_menu"
             ),
             InlineKeyboardButton(
-                text=i18n.get("save_language_button_text"),
+                text=i18n.get("save_language_button"),
                 callback_data="save_language_button_data"
             )
         ]
@@ -76,7 +76,7 @@ def build_grade_kb(i18n: dict) -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text=i18n.get(UserGrade.GRADE_IDK),
+                    text=i18n.get(UserGrade.GRADE_UNDEFINED),
                     callback_data=UserGrade.GRADE_UNDEFINED
                 )
             ]
@@ -101,27 +101,33 @@ def build_channel_kb(i18n: dict, invite_url: str) -> InlineKeyboardMarkup:
     )
 
 
-def build_search_kb(i18n: dict) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+def build_search_kb(i18n: dict, *, back_to_main_menu: bool = False) -> InlineKeyboardMarkup:
+    buttons = []
+
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text=i18n.get("find_term_by_name_button"),
+                switch_inline_query_current_chat=""
+            ),
+            InlineKeyboardButton(
+                text=i18n.get("find_term_by_definition_button"),
+                callback_data="find_term_by_definition"
+            ),
+        ]
+    )
+
+    if back_to_main_menu:
+        buttons.append(
             [
                 InlineKeyboardButton(
-                    text=i18n.get("find_term_by_name"),
-                    switch_inline_query_current_chat=""
-                ),
-                InlineKeyboardButton(
-                    text=i18n.get("find_term_by_definition"),
-                    callback_data="find_term_by_definition"
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text=i18n.get("back_to_main_menu"),
+                    text=i18n.get("back_to_main_menu_button"),
                     callback_data="back_to_main_menu"
                 )
             ]
-        ]
-    )
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def build_considering_definition_kb(i18n: dict) -> InlineKeyboardMarkup:
@@ -129,13 +135,13 @@ def build_considering_definition_kb(i18n: dict) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=i18n.get("definition_was_exact"),
+                    text=i18n.get("definition_was_exact_button"),
                     callback_data="definition_was_exact"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=i18n.get("definition_was_not_exact"),
+                    text=i18n.get("definition_was_not_exact_button"),
                     callback_data="definition_was_not_exact"
                 )
             ]
@@ -148,7 +154,7 @@ def build_repeating_search_definition_kb(i18n: dict) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=i18n.get("repeat_search_definition"),
+                    text=i18n.get("repeat_search_definition_button"),
                     callback_data="find_term_by_definition"
                 )
             ]
