@@ -1,7 +1,7 @@
 import logging
 
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import async_sessionmaker,AsyncSession
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from database.models import Users, Activity
@@ -56,10 +56,16 @@ async def get_user(
 ) -> Users | None:
     result = await session.execute(
         select(Users)
-        .filter_by(user_id=user_id)
+        .where(Users.user_id == user_id)
     )
 
     user = result.scalar_one_or_none()
+
+    if user is None:
+        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
+        return
+
+    logger.debug("Получили данные для пользователя с `user_id`='%d'", user_id)
 
     return user
 
@@ -71,17 +77,16 @@ async def change_user_alive_status(
     user_id: int
 ) -> None:
     result = await session.execute(
-        select(Users)
-        .filter_by(user_id=user_id)
+        update(Users)
+        .where(Users.user_id == user_id)
+        .values(is_alive=is_alive)
     )
 
-    user = result.scalar_one_or_none()
+    is_alive_in_db = result.scalar_one_or_none()
 
-    if user is None:
+    if is_alive_in_db is None:
         logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return
-
-    user.is_alive = is_alive
 
     logger.debug("Обновлён статус `is_alive` на '%s' для пользователя с `user_id`='%d'", is_alive, user_id)
 
@@ -93,17 +98,16 @@ async def change_user_banned_status_by_id(
     user_id: int
 ) -> None:
     result = await session.execute(
-        select(Users)
-        .filter_by(user_id=user_id)
+        update(Users)
+        .where(Users.user_id == user_id)
+        .values(banned=banned)
     )
 
-    user = result.scalar_one_or_none()
+    is_banned_in_db = result.scalar_one_or_none()
 
-    if user is None:
+    if is_banned_in_db is None:
         logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return
-
-    user.banned = banned
 
     logger.debug("Обновлён статус `banned` на '%s' для пользователя с `user_id`='%d'", banned, user_id)
 
@@ -115,17 +119,16 @@ async def change_user_banned_status_by_username(
     username: str
 ) -> None:
     result = await session.execute(
-        select(Users)
-        .filter_by(username=username)
+        update(Users)
+        .where(Users.username == username)
+        .values(banned=banned)
     )
 
-    user = result.scalar_one_or_none()
+    is_banned = result.scalar_one_or_none()
 
-    if user is None:
+    if is_banned is None:
         logger.debug("Не удалось получить пользователя с `username`='%s' из базы данных", username)
         return
-
-    user.banned = banned
 
     logger.debug("Обновлён статус `banned` на '%s' для пользователя с `username`='%s'", banned, username)
 
@@ -137,17 +140,14 @@ async def update_user_language(
     user_id: int
 ) -> None:
     result = await session.execute(
-        select(Users)
-        .filter_by(user_id=user_id)
+        update(Users)
+        .where(Users.user_id == user_id)
+        .values(language=language)
     )
 
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
+    if result.rowcount == 0:
+        logger.debug("Попытка обновить язык несуществующему пользователю: %d", user_id)
         return
-
-    user.language = language
 
     logger.debug("Язык `language`='%s' был установлен для пользователя с `user_id`='%d'", language, user_id)
 
@@ -158,17 +158,15 @@ async def get_user_language(
     user_id: int
 ) -> str | None:
     result = await session.execute(
-        select(Users)
-        .filter_by(user_id=user_id)
+        select(Users.language)
+        .where(Users.user_id == user_id)
     )
 
-    user = result.scalar_one_or_none()
+    language: str = result.scalar_one_or_none()
 
-    if user is None:
+    if language is None:
         logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
-
-    language: str = user.language
 
     logger.debug("У пользователя с `user_id`='%d' установлен следующий язык `language`='%s'", user_id, language)
 
@@ -181,17 +179,15 @@ async def get_user_alive_status(
     user_id: int
 ) -> bool | None:
     result = await session.execute(
-        select(Users)
-        .filter_by(user_id=user_id)
+        select(Users.is_alive)
+        .where(Users.user_id == user_id)
     )
 
-    user = result.scalar_one_or_none()
+    is_alive: bool = result.scalar_one_or_none()
 
-    if user is None:
+    if is_alive is None:
         logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
-
-    is_alive: bool = user.is_alive
 
     logger.debug("У пользователя с `user_id`='%d' установлен следующий статус `is_alive`='%s'", user_id, is_alive)
 
@@ -204,17 +200,15 @@ async def get_user_banned_status_by_id(
     user_id: int
 ) -> bool | None:
     result = await session.execute(
-        select(Users)
-        .filter_by(user_id=user_id)
+        select(Users.banned)
+        .where(Users.user_id==user_id)
     )
 
-    user = result.scalar_one_or_none()
+    banned: bool = result.scalar_one_or_none()
 
-    if user is None:
+    if banned is None:
         logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
-
-    banned: bool = user.banned
 
     logger.debug("У пользователя с `user_id`='%d' установлен следующий статус `banned`='%s'", user_id, banned)
 
@@ -227,18 +221,15 @@ async def get_user_banned_status_by_username(
     username: str
 ) -> bool | None:
     result = await session.execute(
-        select(Users)
-        .filter_by(username=username)
+        select(Users.banned)
+        .where(Users.username == username)
     )
 
-    user = result.scalar_one_or_none()
+    banned: bool = result.scalar_one_or_none()
 
-    if user is None:
+    if banned is None:
         logger.debug("Не удалось получить пользователя с `username`='%s' из базы данных", username)
         return None
-
-
-    banned: bool = user.banned
 
     logger.debug("У пользователя с `username`='%s' установлен следующий статус `banned`='%s'", username, banned)
 
@@ -251,21 +242,19 @@ async def get_user_role(
     user_id: int
 ) -> UserRole | None:
     result = await session.execute(
-        select(Users).
-        filter_by(user_id=user_id)
+        select(Users.role).
+        where(Users.user_id == user_id)
     )
 
-    user = result.scalar_one_or_none()
+    role: UserRole = result.scalar_one_or_none()
 
-    if user is None:
+    if role is None:
         logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
 
-    role: str = user.role
-
     logger.debug("У пользователя с `user_id`='%s' установлена следующая роль: %s", user_id, role)
 
-    return UserRole(role)
+    return role
 
 
 async def get_user_grade(
@@ -274,21 +263,20 @@ async def get_user_grade(
     user_id: int
 ) -> UserGrade | None:
     result = await session.execute(
-        select(Users)
-        .filter_by(user_id=user_id)
+        select(Users.grade)
+        .where(Users.user_id == user_id)
     )
 
-    user = result.scalar_one_or_none()
+    grade: UserGrade = result.scalar_one_or_none()
 
-    if user is None:
+    if grade is None:
         logger.debug("Не удалось получить пользователя с `user_id`='%s' из базы данных", user_id)
         return None
 
-    grade: str = user.grade
-
     logger.debug("У пользователя с `user_id`='%s' установлена следующий класс: %s", user_id, grade)
 
-    return UserGrade(grade)
+    return grade
+
 
 async def add_user_activity(
     session: AsyncSession,
