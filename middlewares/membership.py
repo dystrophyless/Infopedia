@@ -26,7 +26,6 @@ class MembershipMiddleware(BaseMiddleware):
             logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
             return await handler(event, data)
 
-
         username: str = user.username if user.username else user.first_name
 
         bot = data.get("bot")
@@ -34,8 +33,6 @@ class MembershipMiddleware(BaseMiddleware):
         state: FSMContext = data.get("state")
 
         db_user: Users = data.get("db_user")
-
-
 
         if db_user is None:
             logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"", username)
