@@ -14,7 +14,10 @@ async def get_term_by_name(
     *,
     name: str
 ) -> Term | None:
-    result = await session.execute(select(Term).filter_by(name=name))
+    result = await session.execute(
+        select(Term)
+        .where(Term.name == name)
+    )
 
     if result is None:
         logger.debug("Не удалось получить термин с `name`='%s' из базы данных", name)
@@ -32,7 +35,7 @@ async def get_term_by_id(
 ) -> Term | None:
     result = await session.execute(
         select(Term)
-        .filter_by(id=id)
+        .where(Term.id == id)
     )
 
     if result is None:
@@ -51,7 +54,7 @@ async def get_source_by_id(
 ) -> Source | None:
     result = await session.execute(
         select(Source)
-        .filter_by(id=id)
+        .where(Source.id == id)
     )
 
     if result is None:
