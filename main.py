@@ -14,7 +14,7 @@ from redis.asyncio import Redis
 
 from logs.logging_settings import logging_config
 from config_data.config import Config, load_config
-from handlers import register_handlers, language_handlers, user_handlers, admin_handlers, inline_handlers, menu_handlers
+from handlers import register_handlers, language_handlers, user_handlers, admin_handlers, inline_handlers, menu_handlers, subscription_handlers
 from i18n.translator import get_translations
 from database.connection import get_async_engine, get_sessionmaker, init_similarity_extension
 from database.db import get_total_users, get_total_terms
@@ -31,7 +31,7 @@ from middlewares.language_settings import LanguageSettingsMiddleware
 from middlewares.i18n import TranslatorMiddleware
 from middlewares.shadow_ban import ShadowBanMiddleware
 from middlewares.statistics import ActivityCounterMiddleware
-
+from middlewares.feature_usage import FeatureUsageMiddleware
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, write_through=True)
 
@@ -95,6 +95,7 @@ async def main() -> None:
     dp.include_router(admin_handlers.router)
     dp.include_router(user_handlers.router)
     dp.include_router(menu_handlers.router)
+    dp.include_router(subscription_handlers.router)
 
     dp.update.outer_middleware(ThrottlingMiddleware())
     dp.update.outer_middleware(DatabaseMiddleware())
@@ -104,6 +105,8 @@ async def main() -> None:
     dp.update.outer_middleware(ActivityCounterMiddleware())
     dp.update.outer_middleware(LanguageSettingsMiddleware())
     dp.update.outer_middleware(TranslatorMiddleware())
+    dp.message.middleware(FeatureUsageMiddleware())
+    dp.callback_query.middleware(FeatureUsageMiddleware())
 
     dp["bot"] = bot
     dp["channel_id"] = config.bot.channel_id
