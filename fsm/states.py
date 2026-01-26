@@ -18,3 +18,7 @@ class FSMMembership(StatesGroup):
 class FSMSearch(StatesGroup):
     await_definition_to_recognize = State()
     await_considering_definition = State()
+
+
+class FSMSubscription(StatesGroup):
+    await_receipt = State()
