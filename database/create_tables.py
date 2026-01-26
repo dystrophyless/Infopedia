@@ -36,7 +36,7 @@ async def main():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        logger.debug("Таблицы `users` и `activity` были успешно созданы")
+        logger.debug("Таблицы `users`, `user_feedback`, `activity`, `terms`, `sources`, `definitions`,  `feature_usage` были успешно созданы")
 
     except SQLAlchemyError as db_error:
         logger.exception("Ошибка связанная с базой данных: %s", db_error)
