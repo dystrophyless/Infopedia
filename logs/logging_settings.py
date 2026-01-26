@@ -62,6 +62,11 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
+        'handlers.subscription_handlers': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
         'database.connection': {
             'level': 'DEBUG',
             'handlers': ['default'],
@@ -98,6 +103,11 @@ logging_config = {
             'propagate': False
         },
         'database.db_feedback': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'database.db_feature_usage': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
@@ -142,12 +152,27 @@ logging_config = {
             'handlers': ['default'],
             'propagate': False
         },
+        'middlewares.feature_usage': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'services.terms': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
         'services.search': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
         },
         'services.signature': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'services.membership': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
@@ -163,6 +188,11 @@ logging_config = {
             'propagate': False
         },
         'services.term_service': {
+            'level': 'DEBUG',
+            'handlers': ['default'],
+            'propagate': False
+        },
+        'services.feature_usage': {
             'level': 'DEBUG',
             'handlers': ['default'],
             'propagate': False
