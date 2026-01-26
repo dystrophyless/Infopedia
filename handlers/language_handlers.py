@@ -4,19 +4,17 @@ from contextlib import suppress
 from aiogram import Bot, F, Router
 from aiogram.enums import BotCommandScopeType
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, BotCommandScopeChat
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from filters.filters import LocaleFilter
 from keyboards.inline_keyboards import build_language_settings_kb
 from keyboards.main_menu import build_main_menu_kb
 from keyboards.menu_commands import get_main_menu_commands
 from fsm.states import FSMLanguage
-from database.db import get_user_language, get_user_role, update_user_language
-
+from database.models import Users
+from enums.roles import UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +52,12 @@ async def process_language_command(
     i18n: dict,
     locales: list[str],
     state: FSMContext,
-    session: AsyncSession
+    db_user: Users
 ):
     await state.set_state(FSMLanguage.choose_language)
-    user_language = await get_user_language(session, user_id=callback.from_user.id)
+    user_language: str = db_user.language
 
-    msg = await callback.message.answer(
+    msg = await callback.message.edit_text(
         text=i18n.get("/language"),
         reply_markup=build_language_settings_kb(i18n=i18n, locales=locales, checked=user_language)
     )
@@ -73,21 +71,17 @@ async def process_save_click(
     bot: Bot,
     i18n: dict,
     state: FSMContext,
-    session: AsyncSession
+    db_user: Users
 ):
     data = await state.get_data()
-    await update_user_language(
-        session,
-        language=data.get("user_language"),
-        user_id=callback.from_user.id
-    )
+    db_user.language = data.get("user_language")
     await callback.message.edit_text(
         text=i18n.get("language_saved").format(
             user_language=i18n.get(data.get("user_language"))
         )
     )
 
-    user_role = await get_user_role(session, user_id=callback.from_user.id)
+    user_role: UserRole = db_user.role
 
     await bot.set_my_commands(
         commands=get_main_menu_commands(i18n=i18n, role=user_role),
@@ -111,16 +105,10 @@ async def process_cancel_click(
     total_users_count: int,
     total_terms_count: int,
     state: FSMContext,
-    session: AsyncSession
+    db_user: Users
 ):
-    user_language: str = await get_user_language(
-        session,
-        user_id=callback.from_user.id
-    )
-    user_role: str = await get_user_role(
-        session,
-        user_id=callback.from_user.id
-    )
+    user_language: str = db_user.language
+    user_role: UserRole = db_user.role
 
     await callback.answer(
         text=i18n.get("language_cancelled").format(
