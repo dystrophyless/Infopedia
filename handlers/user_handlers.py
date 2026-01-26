@@ -3,7 +3,7 @@ import asyncio
 
 from contextlib import suppress
 
-from aiogram import Router, Bot, F
+from aiogram import Router, Bot, F, flags
 from aiogram.enums import BotCommandScopeType
 from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
 from aiogram.filters import Command, StateFilter
@@ -14,19 +14,20 @@ from aiogram.exceptions import TelegramBadRequest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from exceptions import TermNotFoundByNameError, TermNotFoundByIdError, TermPresentationError
-from keyboards.inline_keyboards import build_search_kb, build_suggestion_kb, build_considering_definition_kb, build_repeating_search_definition_kb
-from keyboards.main_menu import build_menu_kb, build_main_menu_kb
+from keyboards.inline_keyboards import build_suggestion_kb, build_considering_definition_kb, build_repeating_search_definition_kb
+from keyboards.main_menu import build_menu_kb, build_back_kb, build_buy_subscription_kb
 from keyboards.menu_commands import get_main_menu_commands
 from services.definition_service import DefinitionService
 from services.term_service import TermService
 from services.notification_service import NotificationService
 from services.feedback_service import FeedbackService
-from services.user_service import UserService
 from ui.progressive_messages import ProgressiveMessage
 from utils.callback_factories import TermCallback
 from fsm.states import FSMSearch
 from enums.roles import UserRole
-from filters.filters import ActionPayloadFilter
+from enums.features import Feature
+from filters.filters import ActionPayloadFilter, FeatureAccessFilter, UserRoleFilter
+from database.models import Users
 
 logger = logging.getLogger(__name__)
 
@@ -37,20 +38,15 @@ router = Router()
 async def process_start_command(
     message: Message,
     i18n: dict,
-    state: FSMContext,
     bot: Bot,
-    session: AsyncSession
+    db_user: Users
 ):
     await message.answer(
         text=i18n.get("/start"),
         reply_markup=build_menu_kb(i18n)
     )
 
-    user_role: UserRole = await UserService.get_role(
-        session,
-        state=state,
-        user_id=message.from_user.id
-    )
+    user_role: UserRole = db_user.role
 
     await bot.set_my_commands(
         commands=get_main_menu_commands(
@@ -80,101 +76,101 @@ async def process_help_command(
     logger.debug(f"Пользователь {username} прописал команду /help")
 
 
-@router.callback_query(F.data == "search")
-async def process_search_button(
-    callback: CallbackQuery,
-    i18n: dict
-):
-    await callback.message.edit_text(
-        text=i18n.get("choose_search_type"),
-        reply_markup=build_search_kb(i18n)
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data == "find_term_by_definition")
+@router.callback_query(F.data == "find_term_by_definition", UserRoleFilter(UserRole.CLIENT, UserRole.ADMIN))
+@router.callback_query(F.data == "find_term_by_definition", FeatureAccessFilter(Feature.DEFINITION_SEARCH))
 async def process_find_term_by_definition(
     callback: CallbackQuery,
     i18n: dict,
     state: FSMContext,
     bot: Bot
 ):
-    msg_id = await state.get_value("consider_definition_msg_id")
-    if msg_id:
-        await bot.edit_message_reply_markup(
-            chat_id=callback.from_user.id,
-            message_id=msg_id,
-            reply_markup=None
-        )
+
+    with suppress(TelegramBadRequest):
+        msg_id = await state.get_value("consider_definition_msg_id")
+        if msg_id:
+            await bot.edit_message_reply_markup(
+                chat_id=callback.from_user.id,
+                message_id=msg_id,
+                reply_markup=None
+            )
 
     await state.update_data(
         consider_definition_msg_id=None
     )
 
-    await callback.message.answer(
-        text=i18n.get("await_definition_to_recognize")
+    from_menu = await state.get_value("from_menu")
+
+    if from_menu:
+        await callback.message.delete()
+
+    reply_markup = build_back_kb(i18n=i18n, callback_data="search") if from_menu else None
+
+    msg = await callback.message.answer(
+        text=i18n.get("await_definition_to_recognize"),
+        reply_markup=reply_markup
     )
     await callback.answer()
 
     await state.set_state(FSMSearch.await_definition_to_recognize)
+    await state.update_data(await_definition_msg_id=msg.message_id)
 
 
-@router.callback_query(F.data == "back_to_main_menu")
-async def process_going_back_to_main_menu(
+@router.callback_query(F.data == "find_term_by_definition")
+async def process_no_access_to_get_term_by_definition(
     callback: CallbackQuery,
-    total_users_count: int,
-    total_terms_count: int,
     i18n: dict,
-    state: FSMContext
+    state: FSMContext,
+    db_user: Users
 ):
-    user_role: str = await state.get_value("user_role")
-
-    await callback.message.edit_text(
-        text=i18n.get("main_menu").format(
-            total_users=total_users_count,
-            total_terms=total_terms_count,
-            user_role=i18n.get(user_role)
-        ),
-        reply_markup=build_main_menu_kb(i18n)
+    await state.update_data(from_menu=None)
+    await callback.message.answer(
+        text=i18n.get(Feature.DEFINITION_SEARCH.forbidden).format(usage_limit=Feature.DEFINITION_SEARCH.limit),
+        reply_markup=build_buy_subscription_kb(i18n, user_role=db_user.role)
     )
+    await callback.answer()
 
-    await state.set_state()
 
 
 @router.message(StateFilter(FSMSearch.await_definition_to_recognize), F.text.regexp(r"^\S+(?:\s+\S+)+$"))
+@flags.log_feature(feature=Feature.DEFINITION_SEARCH)
 async def process_appropriate_definition(
     message: Message,
     i18n: dict,
+    bot: Bot,
     state: FSMContext,
     session: AsyncSession,
     definition_service: DefinitionService,
 ):
+    with suppress(TelegramBadRequest):
+        msg_id = await state.get_value("await_definition_msg_id")
+        if msg_id:
+            await bot.edit_message_reply_markup(
+                chat_id=message.from_user.id,
+                message_id=msg_id,
+                reply_markup=None
+            )
+
     status_msg = await message.answer(i18n.get("awaiting_response"))
 
-    progress = ProgressiveMessage(message=status_msg)
+    progress = ProgressiveMessage(message=status_msg, update_interval=0.8, default_min_stage_time=0.0)
     progress.set_stage_mapping({
-        "embedding": i18n.get("step_understanding"),
-        "searching": i18n.get("step_searching"),
-        "reranking": i18n.get("step_clarifying"),
-        "deciding": i18n.get("step_preparing"),
+        "embedding": (i18n.get("step_understanding"), 1.8),
+        "searching": (i18n.get("step_searching"), 3.6),
+        "reranking": (i18n.get("step_clarifying"), 1.8),
+        "deciding": (i18n.get("step_preparing"), 1.8),
     })
-
     await progress.start()
 
     async def on_stage(stage: str):
         await progress.update_stage(stage)
 
-    # --- создаём задачу поиска с callback ---
-    search_task = asyncio.create_task(
-        definition_service.get_search_result(
-            session,
-            query=message.text,
-            on_stage=on_stage
-        )
+    definition, info = await definition_service.get_search_result(
+        session,
+        query=message.text,
+        on_stage=on_stage
     )
 
-    definition, info = await search_task
-    await progress.stop()  # ✅ останавливаем прогресс после получения результата
+    await progress.stop()
 
     if definition is None:
         await status_msg.edit_text(
@@ -183,9 +179,11 @@ async def process_appropriate_definition(
         )
 
         await state.update_data(
-            consider_definition_msg_id=status_msg.message_id
+            consider_definition_msg_id=status_msg.message_id,
+            from_menu=None
         )
         await state.set_state()
+
         return
 
     await status_msg.edit_text(
@@ -205,18 +203,29 @@ async def process_appropriate_definition(
     await state.set_state(FSMSearch.await_considering_definition)
 
 
-
 @router.message(StateFilter(FSMSearch.await_definition_to_recognize))
 async def process_inappropriate_definition(
     message: Message,
     i18n: dict,
+    bot: Bot,
     state: FSMContext
 ):
-    await message.answer(
-        text=i18n.get("wrong_definition_length")
+    with suppress(TelegramBadRequest):
+        msg_id = await state.get_value("await_definition_msg_id")
+        if msg_id:
+            await bot.edit_message_reply_markup(
+                chat_id=message.from_user.id,
+                message_id=msg_id,
+                reply_markup=None
+            )
+
+    msg = await message.answer(
+        text=i18n.get("wrong_definition_length"),
+        reply_markup=build_repeating_search_definition_kb(i18n)
     )
 
     await state.set_state()
+    await state.update_data(consider_definition_msg_id=msg.message_id, from_menu=None)
 
 
 @router.callback_query(F.data.in_(["definition_was_exact", "definition_was_not_exact"]), StateFilter(FSMSearch.await_considering_definition))
@@ -233,6 +242,8 @@ async def process_definition_was_exact(
         text=i18n.get(text_key),
         reply_markup=build_repeating_search_definition_kb(i18n)
     )
+
+    await callback.answer()
 
     await FeedbackService.add_feedback(
         session,
@@ -266,7 +277,9 @@ async def process_failed_to_consider_definition(
     )
 
 
-@router.message(ActionPayloadFilter("get_term_info"))
+@router.message(UserRoleFilter(UserRole.CLIENT, UserRole.ADMIN), ActionPayloadFilter("get_term_info"))
+@router.message(FeatureAccessFilter(Feature.TERM_SEARCH), ActionPayloadFilter("get_term_info"))
+@flags.log_feature(feature=Feature.TERM_SEARCH)
 async def process_getting_term_info(
     message: Message,
     i18n: dict,
@@ -290,13 +303,27 @@ async def process_getting_term_info(
         )
 
 
+@router.message(ActionPayloadFilter("get_term_info"))
+async def process_no_access_to_get_term_info(
+    message: Message,
+    i18n: dict,
+    state: FSMContext,
+    db_user: Users
+):
+    await state.update_data(from_menu=None)
+    await message.answer(
+        text=i18n.get(Feature.TERM_SEARCH.forbidden).format(usage_limit=Feature.TERM_SEARCH.limit),
+        reply_markup=build_buy_subscription_kb(i18n, user_role=db_user.role)
+    )
+
+
 @router.callback_query(F.data == "noop")
 async def process_answer_nothing(
     callback: CallbackQuery,
     i18n: dict
 ):
     await callback.answer(
-        text=i18n.get("noop")
+        text=i18n.get("noop_button")
     )
 
 
@@ -381,3 +408,6 @@ async def process_definition_change(
         )
     finally:
         await callback.answer()
+
+
+
