@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 config: Config = load_config('.env')
 
 SECRET_KEY = config.bot.signature.encode()
-USED_SIGNATURES = set()
-
+USED_SIGNATURES: dict[bytes, int] = {}
 
 def generate_payload(data: dict) -> str:
     assert "action" in data, "Payload must include 'action'"
@@ -35,10 +34,9 @@ def generate_payload(data: dict) -> str:
 
 
 
-def verify_payload(spoiler_text: str) -> Optional[dict]:
+def verify_payload(spoiler_text: str, max_uses: int = 1) -> Optional[dict]:
     try:
         action, encoded = spoiler_text.split(":", 1)
-
         encoded_payload, encoded_sig = encoded.split(".", 1)
 
         payload_raw = base64.urlsafe_b64decode(encoded_payload.encode())
@@ -46,22 +44,24 @@ def verify_payload(spoiler_text: str) -> Optional[dict]:
 
         expected_sig = hmac.new(SECRET_KEY, payload_raw, hashlib.sha256).digest()
 
-        if sig in USED_SIGNATURES:
-            logger.debug("Была попытка использовать уже использованную сигнатуру, отклоняем данный payload")
+        uses = USED_SIGNATURES.get(sig, 0)
+        if uses >= max_uses:
+            logger.debug(
+                "Сигнатура уже использована %s раз(а), лимит исчерпан",
+                uses
+            )
             return None
 
         if not hmac.compare_digest(sig, expected_sig):
             logger.debug("Несовпадение сигнатуры, отклоняем данный payload")
-            logger.debug("  ➤ payload_raw (decoded JSON):", payload_raw.decode(errors="replace"))
-            logger.debug("  ➤ expected_sig (hex):", expected_sig.hex())
-            logger.debug("  ➤ actual sig (hex)   :", sig.hex())
             return None
 
         data = json.loads(payload_raw.decode())
-        USED_SIGNATURES.add(sig)
+        USED_SIGNATURES[sig] = uses + 1
         return data
 
     except Exception as e:
-        logger.debug("Что-то пошло не так при верификации payload'а: ", e)
+        logger.debug("Ошибка при верификации payload'а: %s", e)
         return None
+
 
