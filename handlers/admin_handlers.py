@@ -1,9 +1,8 @@
 import logging
 
-from aiogram import Router, Bot, F
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
-from aiogram.filters import Command, CommandObject, StateFilter
+from aiogram import Router
+from aiogram.types import Message
+from aiogram.filters import Command, CommandObject
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
