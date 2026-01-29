@@ -1,16 +1,21 @@
 import logging
 
-from enums.features import Feature
 from database.db import get_users_feature_usage_count
+from enums.features import Feature
 
 logger = logging.getLogger(__name__)
 
 
 async def is_user_allowed_to_use_feature(
-    session, *, user_id: int, feature: Feature
+    session,
+    *,
+    user_id: int,
+    feature: Feature,
 ) -> tuple[bool, int | None]:
     usage_count = await get_users_feature_usage_count(
-        session, user_id=user_id, feature=feature
+        session,
+        user_id=user_id,
+        feature=feature,
     )
 
     usage_limit = feature.limit

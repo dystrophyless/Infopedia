@@ -1,14 +1,13 @@
 import logging
 
-from aiogram import Router, Bot, F
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram import Bot, F, Router
 from aiogram.filters import MagicData, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
+from fsm.states import FSMMembership
 from keyboards.inline_keyboards import build_channel_kb
 from services.membership import is_user_followed
-from fsm.states import FSMMembership
-
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,10 @@ router = Router()
 
 @router.message(MagicData(F.await_membership))
 async def process_any_message(
-    message: Message, i18n: dict, channel_link: str, state: FSMContext
+    message: Message,
+    i18n: dict,
+    channel_link: str,
+    state: FSMContext,
 ):
     await message.answer(
         text=i18n.get("channel_membership"),
@@ -38,7 +40,8 @@ async def process_any_message(
 
 
 @router.callback_query(
-    F.data == "check_membership", StateFilter(FSMMembership.await_membership)
+    F.data == "check_membership",
+    StateFilter(FSMMembership.await_membership),
 )
 async def process_channel_link_press(
     callback: CallbackQuery,
@@ -54,5 +57,6 @@ async def process_channel_link_press(
         await state.set_state()
     else:
         await callback.answer(
-            text=i18n.get("unsuccessful_subscription"), show_alert=True
+            text=i18n.get("unsuccessful_subscription"),
+            show_alert=True,
         )

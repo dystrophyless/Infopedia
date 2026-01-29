@@ -1,12 +1,13 @@
 import logging
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, User
 from aiogram.fsm.context import FSMContext
+from aiogram.types import TelegramObject, User
 
-from services.membership import is_user_followed
 from database.models import Users
+from services.membership import is_user_followed
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class MembershipMiddleware(BaseMiddleware):
 
         if user is None:
             logger.warning(
-                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"',
             )
             return await handler(event, data)
 

@@ -1,7 +1,7 @@
+import logging
+
 from aiogram import Bot
 from aiogram.enums.chat_member_status import ChatMemberStatus
-
-import logging
 
 logger = logging.getLogger(__name__)
 

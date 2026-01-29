@@ -1,5 +1,4 @@
 from aiogram.fsm.context import FSMContext
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.db import add_search_feedback
@@ -8,7 +7,11 @@ from database.db import add_search_feedback
 class FeedbackService:
     @staticmethod
     async def add_feedback(
-        session: AsyncSession, *, state: FSMContext, user_id: int, correct: bool
+        session: AsyncSession,
+        *,
+        state: FSMContext,
+        user_id: int,
+        correct: bool,
     ):
         definition_id: int = await state.get_value("definition_id")
         query: str = await state.get_value("query")

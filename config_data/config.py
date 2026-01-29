@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from environs import Env
 
@@ -39,7 +38,7 @@ class Config:
     redis: RedisSettings
 
 
-def load_config(path: Optional[str] = None) -> Config:
+def load_config(path: str | None = None) -> Config:
     env: Env = Env()
     env.read_env(path, override=True)
 

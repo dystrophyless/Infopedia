@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import UserFeedback
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -17,7 +16,10 @@ async def add_search_feedback(
     correct: bool,
 ) -> None:
     new_feedback: UserFeedback = UserFeedback(
-        user_id=user_id, definition_id=definition_id, query=query, correct=correct
+        user_id=user_id,
+        definition_id=definition_id,
+        query=query,
+        correct=correct,
     )
 
     session.add(new_feedback)

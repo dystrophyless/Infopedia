@@ -2,16 +2,14 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.db import get_term_by_name, get_term_by_id, get_source_by_id
-from services.terms import get_term_info
-from database.models import Term, Source
-
+from database.db import get_source_by_id, get_term_by_id, get_term_by_name
+from database.models import Source, Term
 from exceptions import (
-    TermNotFoundByNameError,
     TermNotFoundByIdError,
+    TermNotFoundByNameError,
     TermPresentationError,
 )
-
+from services.terms import get_term_info
 
 logger = logging.getLogger(__name__)
 

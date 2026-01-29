@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.fsm.context import FSMContext
@@ -23,7 +24,7 @@ class TranslatorMiddleware(BaseMiddleware):
 
         if user is None:
             logger.warning(
-                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"',
             )
             return await handler(event, data)
 

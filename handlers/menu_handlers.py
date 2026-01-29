@@ -1,28 +1,25 @@
 import logging
 
-from aiogram import Router, F, flags
-from aiogram.types import Message, CallbackQuery
+from aiogram import F, Router, flags
 from aiogram.filters import StateFilter
-from aiogram.fsm.state import default_state
 from aiogram.fsm.context import FSMContext
-
-
+from aiogram.fsm.state import default_state
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.terms import get_term_info
-from keyboards.main_menu import (
-    build_profile_menu_kb,
-    build_main_menu_kb,
-    build_buy_subscription_kb,
-)
-from keyboards.inline_keyboards import build_search_kb
-from database.db import get_user_language, get_user_role, get_random_terms
+from database.db import get_random_terms, get_user_language, get_user_role
 from database.models import Term, Users
-from enums.roles import UserRole
 from enums.features import Feature
-from filters.filters import MenuFilter, FeatureAccessFilter, UserRoleFilter
+from enums.roles import UserRole
+from filters.filters import FeatureAccessFilter, MenuFilter, UserRoleFilter
 from fsm.states import FSMLanguage
-
+from keyboards.inline_keyboards import build_search_kb
+from keyboards.main_menu import (
+    build_buy_subscription_kb,
+    build_main_menu_kb,
+    build_profile_menu_kb,
+)
+from services.terms import get_term_info
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +58,14 @@ async def process_profile_menu_button(
         if is_coming_from_language:
             await event.answer(
                 text=i18n.get("language_cancelled").format(
-                    user_language=i18n.get(user_language)
-                )
+                    user_language=i18n.get(user_language),
+                ),
             )
 
             await state.update_data(
-                language_settings_msg_id=None, user_language=None, user_role=None
+                language_settings_msg_id=None,
+                user_language=None,
+                user_role=None,
             )
             await state.set_state()
         await message.edit_text(text=text, reply_markup=build_profile_menu_kb(i18n))
@@ -119,14 +118,18 @@ async def process_search_button(callback: CallbackQuery, i18n: dict, state: FSMC
 
 
 @router.callback_query(
-    F.data == "get_random_term", UserRoleFilter(UserRole.CLIENT, UserRole.ADMIN)
+    F.data == "get_random_term",
+    UserRoleFilter(UserRole.CLIENT, UserRole.ADMIN),
 )
 @router.callback_query(
-    F.data == "get_random_term", FeatureAccessFilter(Feature.RANDOM_TERM)
+    F.data == "get_random_term",
+    FeatureAccessFilter(Feature.RANDOM_TERM),
 )
 @flags.log_feature(feature=Feature.RANDOM_TERM)
 async def process_get_random_term_button(
-    callback: CallbackQuery, i18n: dict, session: AsyncSession
+    callback: CallbackQuery,
+    i18n: dict,
+    session: AsyncSession,
 ):
     random_term: Term = (await get_random_terms(session, quantity=1))[0]
 
@@ -138,12 +141,15 @@ async def process_get_random_term_button(
 
 @router.callback_query(F.data == "get_random_term")
 async def process_no_access_to_get_random_term(
-    callback: CallbackQuery, i18n: dict, state: FSMContext, db_user: Users
+    callback: CallbackQuery,
+    i18n: dict,
+    state: FSMContext,
+    db_user: Users,
 ):
     await state.update_data(from_menu=None)
     await callback.message.answer(
         text=i18n.get(Feature.RANDOM_TERM.forbidden).format(
-            usage_limit=Feature.RANDOM_TERM.limit
+            usage_limit=Feature.RANDOM_TERM.limit,
         ),
         reply_markup=build_buy_subscription_kb(i18n, user_role=db_user.role),
     )
@@ -164,7 +170,9 @@ async def process_get_informed_about_roles_button(
     await callback.message.edit_text(
         text=i18n.get("roles_info").format(user_role=i18n.get(user_role)),
         reply_markup=build_buy_subscription_kb(
-            i18n, user_role=user_role, back_to_profile=from_menu
+            i18n,
+            user_role=user_role,
+            back_to_profile=from_menu,
         ),
     )
     await callback.answer()

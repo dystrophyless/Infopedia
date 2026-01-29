@@ -1,8 +1,8 @@
 from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    InlineKeyboardMarkup,
     InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
 )
 
 from enums.roles import UserRole
@@ -13,12 +13,14 @@ def build_menu_kb(i18n: dict) -> ReplyKeyboardMarkup:
         keyboard=[
             [
                 KeyboardButton(
-                    text=i18n.get("profile_menu_button"), callback_data="profile_menu"
+                    text=i18n.get("profile_menu_button"),
+                    callback_data="profile_menu",
                 ),
                 KeyboardButton(
-                    text=i18n.get("main_menu_button"), callback_data="main_menu"
+                    text=i18n.get("main_menu_button"),
+                    callback_data="main_menu",
                 ),
-            ]
+            ],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
@@ -37,13 +39,16 @@ def build_profile_menu_kb(i18n: dict) -> InlineKeyboardMarkup:
                     text=i18n.get("get_informed_about_roles_button"),
                     callback_data="get_informed_about_roles",
                 ),
-            ]
-        ]
+            ],
+        ],
     )
 
 
 def build_buy_subscription_kb(
-    i18n: dict, *, user_role: UserRole, back_to_profile: bool = False
+    i18n: dict,
+    *,
+    user_role: UserRole,
+    back_to_profile: bool = False,
 ) -> InlineKeyboardMarkup | None:
     if user_role != UserRole.USER and not back_to_profile:
         return None
@@ -55,8 +60,8 @@ def build_buy_subscription_kb(
                 InlineKeyboardButton(
                     text=i18n.get("buy_subscription_button"),
                     callback_data="buy_subscription",
-                )
-            ]
+                ),
+            ],
         )
 
     if back_to_profile:
@@ -65,15 +70,17 @@ def build_buy_subscription_kb(
                 InlineKeyboardButton(
                     text=i18n.get("back_to_profile_menu_button"),
                     callback_data="back_to_profile_menu",
-                )
-            ]
+                ),
+            ],
         )
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def build_buy_subscription_confirmation_kb(
-    i18n: dict, *, back_to_get_informed_about_roles: bool = False
+    i18n: dict,
+    *,
+    back_to_get_informed_about_roles: bool = False,
 ) -> InlineKeyboardMarkup:
     buttons = []
 
@@ -83,7 +90,7 @@ def build_buy_subscription_confirmation_kb(
                 text=i18n.get("confirm_buy_subscription_button"),
                 callback_data="confirm_buy_subscription",
             ),
-        ]
+        ],
     )
 
     if back_to_get_informed_about_roles:
@@ -92,8 +99,8 @@ def build_buy_subscription_confirmation_kb(
                 InlineKeyboardButton(
                     text=i18n.get("back_button"),
                     callback_data="get_informed_about_roles",
-                )
-            ]
+                ),
+            ],
         )
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -104,10 +111,11 @@ def build_back_kb(*, i18n: dict, callback_data: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=i18n.get("back_button"), callback_data=callback_data
-                )
-            ]
-        ]
+                    text=i18n.get("back_button"),
+                    callback_data=callback_data,
+                ),
+            ],
+        ],
     )
 
 
@@ -116,19 +124,21 @@ def build_process_subscription_receipt_kb(user_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Принять", callback_data="approve_subscription"
+                    text="✅ Принять",
+                    callback_data="approve_subscription",
                 ),
                 InlineKeyboardButton(
-                    text="❌ Отклонить", callback_data="reject_subscription"
+                    text="❌ Отклонить",
+                    callback_data="reject_subscription",
                 ),
             ],
             [
                 InlineKeyboardButton(
                     text="⛔ Заблокировать пользователя",
                     callback_data=f"ban_user:{user_id}",
-                )
+                ),
             ],
-        ]
+        ],
     )
 
 
@@ -141,8 +151,9 @@ def build_main_menu_kb(i18n: dict) -> InlineKeyboardMarkup:
                     callback_data="get_random_term",
                 ),
                 InlineKeyboardButton(
-                    text=i18n.get("search_button"), callback_data="search"
+                    text=i18n.get("search_button"),
+                    callback_data="search",
                 ),
             ],
-        ]
+        ],
     )

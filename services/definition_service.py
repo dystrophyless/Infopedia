@@ -1,10 +1,11 @@
-import math
-import numpy as np
-import logging
 import asyncio
-from typing import Callable
+import logging
+import math
+from collections.abc import Callable
 
+import numpy as np
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from database.db_search import get_definition_candidates
 from database.models import Definition
 
@@ -48,7 +49,9 @@ class DefinitionService:
             # безопасный вызов encode в отдельном потоке
             def encode_sync(q):
                 return self.embedder.encode(
-                    q, convert_to_numpy=True, normalize_embeddings=True
+                    q,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
                 )
 
             qvec = await asyncio.to_thread(encode_sync, query)
@@ -94,7 +97,8 @@ class DefinitionService:
         await stage("reranking")
         try:
             rerank_raw = await asyncio.to_thread(
-                self.reranker.predict, [(query, t) for t in texts]
+                self.reranker.predict,
+                [(query, t) for t in texts],
             )
             rerank_raw = np.asarray(rerank_raw, dtype=float).ravel()
         except Exception:
@@ -122,7 +126,8 @@ class DefinitionService:
                 t_int = len(query_words & set(term_name.split()))
                 d_int = len(query_words & set(def_text.split()))
                 keyword_bonus[i] = min(
-                    ((t_int * 2.5 + d_int) / (len(query_words) * 3.5)) * 0.1, 0.1
+                    ((t_int * 2.5 + d_int) / (len(query_words) * 3.5)) * 0.1,
+                    0.1,
                 )
             except:
                 pass
@@ -142,7 +147,7 @@ class DefinitionService:
                     "rerank_norm": float(rerank_norm[i]),
                     "combined": float(combined[i]),
                     "keyword_bonus": float(keyword_bonus[i]),
-                }
+                },
             )
 
         enriched_sorted = sorted(enriched, key=lambda x: x["combined"], reverse=True)
@@ -194,7 +199,8 @@ class DefinitionService:
 
         if best["rerank_raw"] > 0.83:
             logger.debug(
-                "Decision: Принято по высокому реранку (%.4f)", best["rerank_raw"]
+                "Decision: Принято по высокому реранку (%.4f)",
+                best["rerank_raw"],
             )
             return best["definition"]
 
@@ -205,7 +211,8 @@ class DefinitionService:
         if best["combined"] > combined_threshold:
             if margin >= margin_threshold or best["combined"] > 0.63:
                 logger.debug(
-                    "Decision: Принято по Combined/Margin (%.4f)", best["combined"]
+                    "Decision: Принято по Combined/Margin (%.4f)",
+                    best["combined"],
                 )
                 return best["definition"]
 
@@ -217,10 +224,16 @@ class DefinitionService:
         return None
 
     async def get_search_result(
-        self, session: AsyncSession, *, query: str, on_stage: Callable | None = None
+        self,
+        session: AsyncSession,
+        *,
+        query: str,
+        on_stage: Callable | None = None,
     ) -> tuple[Definition, dict] | tuple[None, None]:
         definition: Definition = await self.find_best(
-            session, query=query, on_stage=on_stage
+            session,
+            query=query,
+            on_stage=on_stage,
         )
 
         if not definition:

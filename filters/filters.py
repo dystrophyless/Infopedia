@@ -4,9 +4,9 @@ from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from enums.roles import UserRole
-from enums.features import Feature
 from database.db import get_user_role
+from enums.features import Feature
+from enums.roles import UserRole
 from services.feature_usage import is_user_allowed_to_use_feature
 from services.signature import verify_payload
 
@@ -17,7 +17,7 @@ class LocaleFilter(BaseFilter):
     async def __call__(self, callback: CallbackQuery, locales: list):
         if not isinstance(callback, CallbackQuery):
             raise ValueError(
-                f"LocaleFilter: expected `CallbackQuery`, got `{type(callback).__name__}`"
+                f"LocaleFilter: expected `CallbackQuery`, got `{type(callback).__name__}`",
             )
         return callback.data in locales
 
@@ -37,7 +37,9 @@ class UserRoleFilter(BaseFilter):
             raise ValueError("No valid roles provided to `UserRoleFilter`.")
 
     async def __call__(
-        self, event: Message | CallbackQuery, session: AsyncSession
+        self,
+        event: Message | CallbackQuery,
+        session: AsyncSession,
     ) -> bool:
         user = event.from_user
         if not user:

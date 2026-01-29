@@ -1,14 +1,15 @@
 import logging
-from typing import Any, Awaitable, Callable
-from sqlalchemy.ext.asyncio import AsyncSession
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, User
 from aiogram.fsm.context import FSMContext
+from aiogram.types import TelegramObject, User
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from enums.roles import UserRole
 from database.db import get_user
 from database.models import Users
+from enums.roles import UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class RegistrationMiddleware(BaseMiddleware):
 
         if user is None:
             logger.warning(
-                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"',
             )
             return await handler(event, data)
 
@@ -35,7 +36,7 @@ class RegistrationMiddleware(BaseMiddleware):
         if session is None:
             logger.error("Соединение с базой данных не было найдено в данных мидлвари")
             raise RuntimeError(
-                "Отсутствует соединение с базой данных для проверки зарегистрирован ли пользователь"
+                "Отсутствует соединение с базой данных для проверки зарегистрирован ли пользователь",
             )
 
         username: str = user.username if user.username else user.first_name

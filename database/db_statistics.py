@@ -1,12 +1,11 @@
 import logging
 
-from sqlalchemy import func, select, case, Float, Integer
+from sqlalchemy import Float, Integer, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Users, Activity, Term, Source, Definition, UserFeedback
-from schemas.user import UserStat
+from database.models import Activity, Definition, Source, Term, UserFeedback, Users
 from schemas.feedback import FeedbackStat
-
+from schemas.user import UserStat
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ async def get_activity_statistics_individually(
 
     if not rows:
         logger.debug(
-            "Не удалось получить статистику активности пользователей из базы данных"
+            "Не удалось получить статистику активности пользователей из базы данных",
         )
         return None
 
@@ -48,7 +47,7 @@ async def get_activity_statistics_individually(
     ]
 
     logger.debug(
-        "Была получена статистика активности пользователей с таблицы `activity`"
+        "Была получена статистика активности пользователей с таблицы `activity`",
     )
     return statistics
 
@@ -62,7 +61,7 @@ async def get_activity_statistics_generally(session: AsyncSession) -> int | None
 
     if total_actions is None:
         logger.debug(
-            "Не удалось получить общее количество действий выполненными всеми пользователями за сегодня"
+            "Не удалось получить общее количество действий выполненными всеми пользователями за сегодня",
         )
         return None
 
@@ -70,7 +69,8 @@ async def get_activity_statistics_generally(session: AsyncSession) -> int | None
 
 
 async def get_search_statistics_individually(
-    session: AsyncSession, limit: int = 10
+    session: AsyncSession,
+    limit: int = 10,
 ) -> list[FeedbackStat] | None:
     query = (
         select(
@@ -81,7 +81,7 @@ async def get_search_statistics_individually(
             (
                 (
                     func.sum(case((UserFeedback.correct == True, 1), else_=0)).cast(
-                        Float
+                        Float,
                     )
                     / func.count(UserFeedback.id).cast(Float)
                     * 100
@@ -98,7 +98,7 @@ async def get_search_statistics_individually(
                 / func.count(UserFeedback.id)
                 * 100
             )
-            <= 70
+            <= 70,
         )
         .order_by("accuracy")
         .limit(limit)
@@ -109,7 +109,7 @@ async def get_search_statistics_individually(
 
     if not rows:
         logger.debug(
-            "Не удалось получить индивидуальную статистику точности поиска по определению из базы данных"
+            "Не удалось получить индивидуальную статистику точности поиска по определению из базы данных",
         )
         return None
 
@@ -125,7 +125,7 @@ async def get_search_statistics_individually(
     ]
 
     logger.debug(
-        "Была получена индивидуальная статистика точности поиска по определению из базы данных"
+        "Была получена индивидуальная статистика точности поиска по определению из базы данных",
     )
     return statistics
 
@@ -149,7 +149,7 @@ async def get_search_statistics_generally(
 
     if not rows:
         logger.debug(
-            "Не удалось получить общую статистику точности поиска по определению из базы данных"
+            "Не удалось получить общую статистику точности поиска по определению из базы данных",
         )
         return None
 
