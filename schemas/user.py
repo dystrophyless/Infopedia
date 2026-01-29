@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from services.mention import get_user_link
 
+
 @dataclass
 class UserStat:
     user_id: int
@@ -10,4 +11,6 @@ class UserStat:
 
     @property
     def link(self) -> str:
-        return get_user_link(user_id=self.user_id, username=self.username, first_name=self.first_name)
+        return get_user_link(
+            user_id=self.user_id, username=self.username, first_name=self.first_name
+        )

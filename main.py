@@ -1,37 +1,47 @@
 import asyncio
+import io
 import logging
 import logging.config
 import os
 import sys
-import io
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
-
 from redis.asyncio import Redis
 
-from logs.logging_settings import logging_config
 from config_data.config import Config, load_config
-from handlers import register_handlers, language_handlers, user_handlers, admin_handlers, inline_handlers, menu_handlers, subscription_handlers
-from i18n.translator import get_translations
-from database.connection import get_async_engine, get_sessionmaker, init_similarity_extension
-from database.db import get_total_users, get_total_terms
+from database.connection import (
+    get_async_engine,
+    get_sessionmaker,
+    init_similarity_extension,
+)
+from database.db import get_total_terms, get_total_users
 from database.loader import load_terms_from_json
-from services.nlp import embedder, reranker
-from services.definition_service import DefinitionService
-from services.term_service import TermService
-
-from middlewares.throttler import ThrottlingMiddleware
+from handlers import (
+    admin_handlers,
+    inline_handlers,
+    language_handlers,
+    menu_handlers,
+    register_handlers,
+    subscription_handlers,
+    user_handlers,
+)
+from i18n.translator import get_translations
+from logs.logging_settings import logging_config
 from middlewares.database import DatabaseMiddleware
-from middlewares.registration import RegistrationMiddleware
-from middlewares.membership import MembershipMiddleware
-from middlewares.language_settings import LanguageSettingsMiddleware
+from middlewares.feature_usage import FeatureUsageMiddleware
 from middlewares.i18n import TranslatorMiddleware
+from middlewares.language_settings import LanguageSettingsMiddleware
+from middlewares.membership import MembershipMiddleware
+from middlewares.registration import RegistrationMiddleware
 from middlewares.shadow_ban import ShadowBanMiddleware
 from middlewares.statistics import ActivityCounterMiddleware
-from middlewares.feature_usage import FeatureUsageMiddleware
+from middlewares.throttler import ThrottlingMiddleware
+from services.definition_service import DefinitionService
+from services.nlp import embedder, reranker
+from services.term_service import TermService
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, write_through=True)
 
@@ -52,15 +62,15 @@ async def main() -> None:
             db=config.redis.db,
             password=config.redis.password,
             username=config.redis.username,
-        )
+        ),
     )
 
     bot = Bot(
         token=config.bot.token,
         default=DefaultBotProperties(
             parse_mode=ParseMode.HTML,
-            link_preview_is_disabled=True
-        )
+            link_preview_is_disabled=True,
+        ),
     )
     dp = Dispatcher(storage=storage)
 
@@ -130,9 +140,9 @@ async def main() -> None:
         await engine.dispose()
         logger.debug("Соединение с PostgreSQL было закрыто")
 
+
 if __name__ == "__main__":
     if sys.platform.startswith("win") or os.name == "nt":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     asyncio.run(main())
-

@@ -36,7 +36,9 @@ class UserRoleFilter(BaseFilter):
         if not self.roles:
             raise ValueError("No valid roles provided to `UserRoleFilter`.")
 
-    async def __call__(self, event: Message | CallbackQuery, session: AsyncSession) -> bool:
+    async def __call__(
+        self, event: Message | CallbackQuery, session: AsyncSession
+    ) -> bool:
         user = event.from_user
         if not user:
             return False
@@ -60,10 +62,17 @@ class ActionPayloadFilter(BaseFilter):
 
         payload = verify_payload(message.text, self.usage_limit)
 
-        username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
+        username: str = (
+            message.from_user.username
+            if message.from_user.username
+            else message.from_user.first_name
+        )
 
         if payload is None:
-            logger.debug("Злоумышленник с `username`='%s' попытался сфальсифицировать payload.", username)
+            logger.debug(
+                "Злоумышленник с `username`='%s' попытался сфальсифицировать payload.",
+                username,
+            )
             return False
 
         if payload.get("action") != self.action:
@@ -103,11 +112,19 @@ class FeatureAccessFilter(BaseFilter):
         )
 
         if is_allowed:
-            logger.debug("Пользователю с `user_id`='%d' разрешено использовать фичу с `feature_name`='%s' (%d/%d попыток)", user_id,
-                     self.feature.name, usage_count, self.feature.limit)
+            logger.debug(
+                "Пользователю с `user_id`='%d' разрешено использовать фичу с `feature_name`='%s' (%d/%d попыток)",
+                user_id,
+                self.feature.name,
+                usage_count,
+                self.feature.limit,
+            )
             return True
 
-        logger.warning("Пользователю с `user_id`='%d' запрещено использовать фичу с `feature_name`='%s' из-за превышения лимита использования", user_id,
-                       self.feature.name)
+        logger.warning(
+            "Пользователю с `user_id`='%d' запрещено использовать фичу с `feature_name`='%s' из-за превышения лимита использования",
+            user_id,
+            self.feature.name,
+        )
 
         return False

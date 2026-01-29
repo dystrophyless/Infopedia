@@ -17,23 +17,29 @@ router = Router()
 
 @router.message(MagicData(F.await_membership))
 async def process_any_message(
-    message: Message,
-    i18n: dict,
-    channel_link: str,
-    state: FSMContext
+    message: Message, i18n: dict, channel_link: str, state: FSMContext
 ):
     await message.answer(
         text=i18n.get("channel_membership"),
-        reply_markup = build_channel_kb(i18n, channel_link)
+        reply_markup=build_channel_kb(i18n, channel_link),
     )
 
     await state.set_state(FSMMembership.await_membership)
 
-    username: str = message.from_user.username if message.from_user.username else message.from_user.first_name
-    logger.debug("Пользователь с username=`%s` который был зарегистрирован отписался от Infopedia, поэтому требуем обратную подписки", username)
+    username: str = (
+        message.from_user.username
+        if message.from_user.username
+        else message.from_user.first_name
+    )
+    logger.debug(
+        "Пользователь с username=`%s` который был зарегистрирован отписался от Infopedia, поэтому требуем обратную подписки",
+        username,
+    )
 
 
-@router.callback_query(F.data == 'check_membership', StateFilter(FSMMembership.await_membership))
+@router.callback_query(
+    F.data == "check_membership", StateFilter(FSMMembership.await_membership)
+)
 async def process_channel_link_press(
     callback: CallbackQuery,
     bot: Bot,
@@ -48,6 +54,5 @@ async def process_channel_link_press(
         await state.set_state()
     else:
         await callback.answer(
-            text=i18n.get("unsuccessful_subscription"),
-            show_alert=True
+            text=i18n.get("unsuccessful_subscription"), show_alert=True
         )

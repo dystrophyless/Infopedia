@@ -12,26 +12,31 @@ from database.models import Users
 
 logger = logging.getLogger(__name__)
 
+
 class RegistrationMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: dict[str, Any]
+        data: dict[str, Any],
     ) -> Any:
         logger.debug("Входим в RegistrationMiddleware")
 
         user: User = data.get("event_from_user")
 
         if user is None:
-            logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
+            logger.warning(
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+            )
             return await handler(event, data)
 
         session: AsyncSession = data.get("session")
 
         if session is None:
             logger.error("Соединение с базой данных не было найдено в данных мидлвари")
-            raise RuntimeError("Отсутствует соединение с базой данных для проверки зарегистрирован ли пользователь")
+            raise RuntimeError(
+                "Отсутствует соединение с базой данных для проверки зарегистрирован ли пользователь"
+            )
 
         username: str = user.username if user.username else user.first_name
 
@@ -40,7 +45,10 @@ class RegistrationMiddleware(BaseMiddleware):
         state: FSMContext = data.get("state")
 
         if db_user is None:
-            logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, определяем роль пользователя, передаём в контекст, устанавливаем состояние регистрации, переходим в следующий \"обработчик\"", username)
+            logger.debug(
+                "Данные о пользователе с `username`='%s' не удалось получить из базы данных, определяем роль пользователя, передаём в контекст, устанавливаем состояние регистрации, переходим в следующий \"обработчик\"",
+                username,
+            )
 
             admin_ids: list[int] = data.get("admin_ids")
             if user.id in admin_ids:
@@ -48,7 +56,11 @@ class RegistrationMiddleware(BaseMiddleware):
             else:
                 user_role = UserRole.USER
 
-            logger.debug("Роль пользователя с `username`='%s': %s была передана в контекст", username, user_role)
+            logger.debug(
+                "Роль пользователя с `username`='%s': %s была передана в контекст",
+                username,
+                user_role,
+            )
 
             await state.update_data(user_role=user_role)
 
@@ -63,7 +75,7 @@ class RegistrationMiddleware(BaseMiddleware):
                 db_user.grade,
                 db_user.role,
                 db_user.is_alive,
-                db_user.banned
+                db_user.banned,
             )
 
             data["start_registration"] = None
@@ -75,4 +87,3 @@ class RegistrationMiddleware(BaseMiddleware):
         logger.debug("Выходим из RegistrationMiddleware")
 
         return result
-

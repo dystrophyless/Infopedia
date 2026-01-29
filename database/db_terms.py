@@ -9,15 +9,8 @@ from database.models import Term, Source
 logger = logging.getLogger(__name__)
 
 
-async def get_term_by_name(
-    session: AsyncSession,
-    *,
-    name: str
-) -> Term | None:
-    result = await session.execute(
-        select(Term)
-        .where(Term.name == name)
-    )
+async def get_term_by_name(session: AsyncSession, *, name: str) -> Term | None:
+    result = await session.execute(select(Term).where(Term.name == name))
 
     if result is None:
         logger.debug("Не удалось получить термин с `name`='%s' из базы данных", name)
@@ -28,15 +21,8 @@ async def get_term_by_name(
     return term
 
 
-async def get_term_by_id(
-    session: AsyncSession,
-    *,
-    id: int
-) -> Term | None:
-    result = await session.execute(
-        select(Term)
-        .where(Term.id == id)
-    )
+async def get_term_by_id(session: AsyncSession, *, id: int) -> Term | None:
+    result = await session.execute(select(Term).where(Term.id == id))
 
     if result is None:
         logger.debug("Не удалось получить термин с `id`='%s' из базы данных", id)
@@ -47,15 +33,8 @@ async def get_term_by_id(
     return term
 
 
-async def get_source_by_id(
-    session: AsyncSession,
-    *,
-    id: int
-) -> Source | None:
-    result = await session.execute(
-        select(Source)
-        .where(Source.id == id)
-    )
+async def get_source_by_id(session: AsyncSession, *, id: int) -> Source | None:
+    result = await session.execute(select(Source).where(Source.id == id))
 
     if result is None:
         logger.debug("Не удалось получить источник с `id`='%s' из базы данных", id)
@@ -67,15 +46,9 @@ async def get_source_by_id(
 
 
 async def get_random_terms(
-    session: AsyncSession,
-    *,
-    quantity: int
+    session: AsyncSession, *, quantity: int
 ) -> list[Term] | None:
-    result = await session.execute(
-        select(Term)
-        .order_by(func.random())
-        .limit(quantity)
-    )
+    result = await session.execute(select(Term).order_by(func.random()).limit(quantity))
 
     if result is None:
         logger.debug("Не удалось получить рандомные термины из базы данных")
@@ -87,22 +60,18 @@ async def get_random_terms(
 
 
 async def search_terms_by_prefix(
-    session: AsyncSession,
-    *,
-    query: str,
-    limit: int = 10,
-    prefix: bool = True
+    session: AsyncSession, *, query: str, limit: int = 10, prefix: bool = True
 ) -> list[Term] | None:
-
     like: str = f"{query}%" if prefix else f"%{query}%"
     result = await session.execute(
-        select(Term)
-        .where(Term.name.ilike(like))
-        .limit(limit)
+        select(Term).where(Term.name.ilike(like)).limit(limit)
     )
 
     if result is None:
-        logger.debug("Не удалось получить термины которые начинаются на `query=%s` из базы данных", query)
+        logger.debug(
+            "Не удалось получить термины которые начинаются на `query=%s` из базы данных",
+            query,
+        )
         return None
 
     terms: list[Term] = list(result.scalars().all())
@@ -124,7 +93,9 @@ async def search_terms_by_similarity(
     )
 
     if result is None:
-        logger.debug("Не удалось получить термины похожие на `query=%s` из базы данных", query)
+        logger.debug(
+            "Не удалось получить термины похожие на `query=%s` из базы данных", query
+        )
         return None
 
     terms: list[Term] = list(result.scalars().all())

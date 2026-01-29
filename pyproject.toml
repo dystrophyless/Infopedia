@@ -1,0 +1,2 @@
+[tool.ruff]
+extend = "C:/Users/roman/AppData/Roaming/ruff/ruff.toml"

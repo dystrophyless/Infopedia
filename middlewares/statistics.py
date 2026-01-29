@@ -14,17 +14,20 @@ logger = logging.getLogger(__name__)
 
 
 class ActivityCounterMiddleware(BaseMiddleware):
-    async def __call__(self,
+    async def __call__(
+        self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: dict[str, Any]
+        data: dict[str, Any],
     ) -> Any:
         logger.debug("Входим в ActivityCounterMiddleware")
 
         user: User = data.get("event_from_user")
 
         if user is None:
-            logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
+            logger.warning(
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+            )
             return await handler(event, data)
 
         username: str = user.username if user.username else user.first_name
@@ -34,16 +37,23 @@ class ActivityCounterMiddleware(BaseMiddleware):
         db_user: Users = data.get("db_user")
 
         if db_user is None:
-            logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"", username)
+            logger.debug(
+                "Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"",
+                username,
+            )
             return result
 
-        logger.debug("Добавляем активность пользователя с `username`='%s' в БД", username)
+        logger.debug(
+            "Добавляем активность пользователя с `username`='%s' в БД", username
+        )
 
         session: AsyncSession = data.get("session")
 
         if session is None:
             logger.error("Соединение с базой данных не было найдено в данных мидлвари")
-            raise RuntimeError("Отсутствует соединение с базой данных для того что бы считать активность")
+            raise RuntimeError(
+                "Отсутствует соединение с базой данных для того что бы считать активность"
+            )
 
         await add_user_activity(session, user_id=user.id)
 

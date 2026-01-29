@@ -5,15 +5,11 @@ from aiogram.types import User
 from keyboards.inline_keyboards import build_suggestion_decision_kb
 from services.mention import get_user_link
 
+
 class NotificationService:
     @classmethod
     async def send_new_suggestion_alert(
-        cls,
-        *,
-        bot: Bot,
-        user: User,
-        chat_id: str,
-        term: str
+        cls, *, bot: Bot, user: User, chat_id: str, term: str
     ):
         text = (
             f"📄 Было предложено добавить новый термин: <b>{escape(term)}</b>\n\n"
@@ -23,5 +19,5 @@ class NotificationService:
         await bot.send_message(
             text=text,
             chat_id=chat_id,
-            reply_markup=build_suggestion_decision_kb(user.id)
+            reply_markup=build_suggestion_decision_kb(user.id),
         )
