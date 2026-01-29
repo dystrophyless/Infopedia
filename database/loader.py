@@ -20,8 +20,9 @@ async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
 
         for source_name, defs in sources.items():
             result = await session.execute(
-                select(Source)
-                .where(Source.term_id == term.id, Source.name == source_name)
+                select(Source).where(
+                    Source.term_id == term.id, Source.name == source_name
+                )
             )
             source = result.scalar_one_or_none()
 
@@ -49,9 +50,8 @@ async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
                         topic=d.get("topic"),
                         page=d.get("page"),
                         source=source,
-                        embedding=emb
+                        embedding=emb,
                     )
                     session.add(definition)
 
     await session.commit()
-

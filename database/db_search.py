@@ -15,36 +15,22 @@ logger = logging.getLogger(__name__)
 class SearchStrategy(ABC):
     @abstractmethod
     async def search(
-        self,
-        session: AsyncSession,
-        *,
-        query: str,
-        limit: int
+        self, session: AsyncSession, *, query: str, limit: int
     ) -> list[Term] | None:
         pass
 
 
 class PrefixSearchStrategy(SearchStrategy):
-    def __init__(
-        self,
-        *,
-        is_prefix: bool = True
-    ):
+    def __init__(self, *, is_prefix: bool = True):
         self.is_prefix = is_prefix
 
     async def search(
-        self,
-        session: AsyncSession,
-        *,
-        query: str,
-        limit: int
+        self, session: AsyncSession, *, query: str, limit: int
     ) -> list[Term] | None:
         like_pattern: str = f"{query}%" if self.is_prefix else f"%{query}%"
 
         result = await session.execute(
-            select(Term)
-            .where(Term.name.ilike(like_pattern))
-            .limit(limit)
+            select(Term).where(Term.name.ilike(like_pattern)).limit(limit)
         )
 
         terms = list(result.scalars().all())
@@ -52,7 +38,8 @@ class PrefixSearchStrategy(SearchStrategy):
         if not terms:
             logger.debug(
                 "Не удалось получить термины по паттерну `%s` (prefix=%s)",
-                query, self.is_prefix
+                query,
+                self.is_prefix,
             )
             return None
 
@@ -61,11 +48,7 @@ class PrefixSearchStrategy(SearchStrategy):
 
 class SimilaritySearchStrategy(SearchStrategy):
     async def search(
-        self,
-        session: AsyncSession,
-        *,
-        query: str,
-        limit: int
+        self, session: AsyncSession, *, query: str, limit: int
     ) -> list[Term] | None:
         result = await session.execute(
             select(Term)
@@ -82,6 +65,7 @@ class SimilaritySearchStrategy(SearchStrategy):
 
         return terms
 
+
 class SearchContext:
     def __init__(self, strategy: SearchStrategy) -> None:
         self._strategy = strategy
@@ -95,24 +79,16 @@ class SearchContext:
         self._strategy = strategy
 
     async def execute_search(
-        self,
-        session: AsyncSession,
-        *,
-        query: str,
-        limit: int = 10
+        self, session: AsyncSession, *, query: str, limit: int = 10
     ) -> list[Term] | None:
-        return await self._strategy.search(
-            session,
-            query=query,
-            limit=limit
-        )
+        return await self._strategy.search(session, query=query, limit=limit)
 
 
 async def get_definition_candidates(session, qvec_list, top_k: int):
     stmt = (
         select(
             Definition,
-            (1 - Definition.embedding.cosine_distance(qvec_list)).label("sim_approx")
+            (1 - Definition.embedding.cosine_distance(qvec_list)).label("sim_approx"),
         )
         .options(selectinload(Definition.source).selectinload(Source.term))
         .order_by(Definition.embedding.cosine_distance(qvec_list))

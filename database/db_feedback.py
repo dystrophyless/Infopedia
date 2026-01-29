@@ -14,13 +14,10 @@ async def add_search_feedback(
     user_id: int,
     definition_id: int,
     query: str,
-    correct: bool
+    correct: bool,
 ) -> None:
     new_feedback: UserFeedback = UserFeedback(
-        user_id=user_id,
-        definition_id=definition_id,
-        query=query,
-        correct=correct
+        user_id=user_id, definition_id=definition_id, query=query, correct=correct
     )
 
     session.add(new_feedback)

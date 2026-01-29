@@ -11,16 +11,19 @@ from config_data.config import Config, load_config
 
 logger = logging.getLogger(__name__)
 
-config: Config = load_config('.env')
+config: Config = load_config(".env")
 
 SECRET_KEY = config.bot.signature.encode()
 USED_SIGNATURES: dict[bytes, int] = {}
+
 
 def generate_payload(data: dict) -> str:
     assert "action" in data, "Payload must include 'action'"
     data["ts"] = int(time.time())
 
-    payload_json = json.dumps(data, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
+    payload_json = json.dumps(
+        data, separators=(",", ":"), ensure_ascii=False, sort_keys=True
+    )
     payload_raw = payload_json.encode()
 
     signature = hmac.new(SECRET_KEY, payload_raw, hashlib.sha256).digest()
@@ -31,7 +34,6 @@ def generate_payload(data: dict) -> str:
     full = f"{encoded_payload}.{encoded_sig}"
 
     return f'<span class="tg-spoiler">{data["action"]}:{full}</span>'
-
 
 
 def verify_payload(spoiler_text: str, max_uses: int = 1) -> Optional[dict]:
@@ -46,10 +48,7 @@ def verify_payload(spoiler_text: str, max_uses: int = 1) -> Optional[dict]:
 
         uses = USED_SIGNATURES.get(sig, 0)
         if uses >= max_uses:
-            logger.debug(
-                "Сигнатура уже использована %s раз(а), лимит исчерпан",
-                uses
-            )
+            logger.debug("Сигнатура уже использована %s раз(а), лимит исчерпан", uses)
             return None
 
         if not hmac.compare_digest(sig, expected_sig):
@@ -63,5 +62,3 @@ def verify_payload(spoiler_text: str, max_uses: int = 1) -> Optional[dict]:
     except Exception as e:
         logger.debug("Ошибка при верификации payload'а: %s", e)
         return None
-
-

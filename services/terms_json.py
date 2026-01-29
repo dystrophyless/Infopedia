@@ -96,9 +96,13 @@ def merge_terms(target: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, A
     В рамках одного term+source, если definition совпадает без учёта регистра — НЕ добавляем.
     """
     if not isinstance(target, dict):
-        raise ValueError("terms.json должен быть JSON-объектом (dict) на верхнем уровне.")
+        raise ValueError(
+            "terms.json должен быть JSON-объектом (dict) на верхнем уровне."
+        )
     if not isinstance(incoming, dict):
-        raise ValueError("incoming_terms.json должен быть JSON-объектом (dict) на верхнем уровне.")
+        raise ValueError(
+            "incoming_terms.json должен быть JSON-объектом (dict) на верхнем уровне."
+        )
 
     for term, sources in incoming.items():
         if not isinstance(term, str) or not term.strip():
@@ -123,7 +127,9 @@ def merge_terms(target: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, A
                 continue
 
             # если источника нет — добавляем целиком
-            if source not in target[term] or not isinstance(target[term].get(source), list):
+            if source not in target[term] or not isinstance(
+                target[term].get(source), list
+            ):
                 target[term][source] = items
                 continue
 

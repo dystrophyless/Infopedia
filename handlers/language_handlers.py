@@ -23,11 +23,7 @@ router = Router()
 
 @router.message(StateFilter(FSMLanguage.choose_language))
 async def process_any_message_when_language(
-    message: Message,
-    bot: Bot,
-    i18n: dict,
-    locales: list[str],
-    state: FSMContext
+    message: Message, bot: Bot, i18n: dict, locales: list[str], state: FSMContext
 ):
     user_id = message.from_user.id
 
@@ -40,7 +36,9 @@ async def process_any_message_when_language(
 
     msg = await message.answer(
         text=i18n.get("/language"),
-        reply_markup=build_language_settings_kb(i18n=i18n, locales=locales, checked=user_language)
+        reply_markup=build_language_settings_kb(
+            i18n=i18n, locales=locales, checked=user_language
+        ),
     )
 
     await state.update_data(language_settings_msg_id=msg.message_id)
@@ -52,26 +50,28 @@ async def process_language_command(
     i18n: dict,
     locales: list[str],
     state: FSMContext,
-    db_user: Users
+    db_user: Users,
 ):
     await state.set_state(FSMLanguage.choose_language)
     user_language: str = db_user.language
 
     msg = await callback.message.edit_text(
         text=i18n.get("/language"),
-        reply_markup=build_language_settings_kb(i18n=i18n, locales=locales, checked=user_language)
+        reply_markup=build_language_settings_kb(
+            i18n=i18n, locales=locales, checked=user_language
+        ),
     )
 
-    await state.update_data(language_settings_msg_id=msg.message_id, user_language=user_language)
+    await state.update_data(
+        language_settings_msg_id=msg.message_id, user_language=user_language
+    )
 
 
-@router.callback_query(F.data == "save_language_button_data", FSMLanguage.choose_language)
+@router.callback_query(
+    F.data == "save_language_button_data", FSMLanguage.choose_language
+)
 async def process_save_click(
-    callback: CallbackQuery,
-    bot: Bot,
-    i18n: dict,
-    state: FSMContext,
-    db_user: Users
+    callback: CallbackQuery, bot: Bot, i18n: dict, state: FSMContext, db_user: Users
 ):
     data = await state.get_data()
     db_user.language = data.get("user_language")
@@ -86,26 +86,24 @@ async def process_save_click(
     await bot.set_my_commands(
         commands=get_main_menu_commands(i18n=i18n, role=user_role),
         scope=BotCommandScopeChat(
-            type=BotCommandScopeType.CHAT,
-            chat_id=callback.from_user.id
-        )
+            type=BotCommandScopeType.CHAT, chat_id=callback.from_user.id
+        ),
     )
 
-    await state.update_data(
-        language_settings_msg_id=None,
-        user_language=None
-    )
+    await state.update_data(language_settings_msg_id=None, user_language=None)
     await state.set_state()
 
 
-@router.callback_query(F.data == "cancel_language_button_data", FSMLanguage.choose_language)
+@router.callback_query(
+    F.data == "cancel_language_button_data", FSMLanguage.choose_language
+)
 async def process_cancel_click(
     callback: CallbackQuery,
     i18n: dict,
     total_users_count: int,
     total_terms_count: int,
     state: FSMContext,
-    db_user: Users
+    db_user: Users,
 ):
     user_language: str = db_user.language
     user_role: UserRole = db_user.role
@@ -120,35 +118,27 @@ async def process_cancel_click(
         text=i18n.get("main_menu").format(
             total_users=total_users_count,
             total_terms=total_terms_count,
-            user_role=i18n.get(user_role)
+            user_role=i18n.get(user_role),
         ),
-        reply_markup=build_main_menu_kb(i18n)
+        reply_markup=build_main_menu_kb(i18n),
     )
 
     await state.update_data(
-        language_settings_msg_id=None,
-        user_language=None,
-        user_role=user_role
+        language_settings_msg_id=None, user_language=None, user_role=user_role
     )
     await state.set_state()
 
 
 @router.callback_query(LocaleFilter(), FSMLanguage.choose_language)
 async def process_language_click(
-    callback: CallbackQuery,
-    i18n: dict,
-    locales: list[str]
+    callback: CallbackQuery, i18n: dict, locales: list[str]
 ):
     try:
         await callback.message.edit_text(
             text=i18n.get("/language"),
             reply_markup=build_language_settings_kb(
-                i18n=i18n,
-                locales=locales,
-                checked=callback.data
-            )
+                i18n=i18n, locales=locales, checked=callback.data
+            ),
         )
     except TelegramBadRequest:
         await callback.answer()
-
-

@@ -6,29 +6,25 @@ from database.models import Term, Source, Definition
 
 class ITermBuilder(ABC):
     @abstractmethod
-    def reset(self) -> 'ITermBuilder':
+    def reset(self) -> "ITermBuilder":
         pass
 
     @abstractmethod
-    def set_term_name(self, *, name: str) -> 'ITermBuilder':
+    def set_term_name(self, *, name: str) -> "ITermBuilder":
         pass
 
     @abstractmethod
-    def add_source(self, *, source_name: str) -> 'ITermBuilder':
+    def add_source(self, *, source_name: str) -> "ITermBuilder":
         pass
 
     @abstractmethod
     def add_definition(
-        self,
-        *,
-        text: str,
-        topic: str | None = None,
-        page: int | None = None
-    ) -> 'ITermBuilder':
+        self, *, text: str, topic: str | None = None, page: int | None = None
+    ) -> "ITermBuilder":
         pass
 
     @abstractmethod
-    def set_embedding_generator(self, embedder) -> 'ITermBuilder':
+    def set_embedding_generator(self, embedder) -> "ITermBuilder":
         pass
 
     @abstractmethod
@@ -41,20 +37,20 @@ class TermBuilder(ITermBuilder):
         self.embedder = None
         self.reset()
 
-    def reset(self) -> 'TermBuilder':
+    def reset(self) -> "TermBuilder":
         self.term: Term = Term(name="")
         self.term.sources = []
         self.current_source: Source | None = None
         return self
 
-    def set_term_name(self, *, name: str) -> 'TermBuilder':
+    def set_term_name(self, *, name: str) -> "TermBuilder":
         if not name or not name.strip():
             raise ValueError("Имя термина не может быть пустым.")
 
         self.term.name = name.strip()
         return self
 
-    def add_source(self, *, source_name: str) -> 'TermBuilder':
+    def add_source(self, *, source_name: str) -> "TermBuilder":
         if not source_name or not source_name.strip():
             raise ValueError("Имя источника не может быть пустым.")
 
@@ -68,12 +64,8 @@ class TermBuilder(ITermBuilder):
         return self
 
     def add_definition(
-        self,
-        *,
-        text: str,
-        topic: str | None = None,
-        page: int | None = None
-    ) -> 'TermBuilder':
+        self, *, text: str, topic: str | None = None, page: int | None = None
+    ) -> "TermBuilder":
         if self.current_source is None:
             raise ValueError(
                 "Перед добавлением определения необходимо добавить источник."
@@ -86,21 +78,19 @@ class TermBuilder(ITermBuilder):
             text=text.strip(),
             topic=topic.strip() if topic else None,
             page=page,
-            source=self.current_source
+            source=self.current_source,
         )
 
         if self.embedder is not None:
             embedding = self.embedder.encode(
-                definition.text,
-                convert_to_numpy=True,
-                normalize_embeddings=True
+                definition.text, convert_to_numpy=True, normalize_embeddings=True
             )
             definition.embedding = np.asarray(embedding).ravel().tolist()
 
         self.current_source.definitions.append(definition)
         return self
 
-    def set_embedding_generator(self, embedder) -> 'TermBuilder':
+    def set_embedding_generator(self, embedder) -> "TermBuilder":
         self.embedder = embedder
         return self
 

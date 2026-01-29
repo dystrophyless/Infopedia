@@ -15,7 +15,7 @@ class DatabaseMiddleware(BaseMiddleware):
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: dict[str, Any]
+        data: dict[str, Any],
     ) -> Any:
         logger.debug("Входим в DatabaseMiddleware")
 

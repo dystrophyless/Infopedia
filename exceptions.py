@@ -24,4 +24,3 @@ class NoSourcesFoundError(TermAppError):
 
 class SecurityPayloadError(TermAppError):
     pass
-

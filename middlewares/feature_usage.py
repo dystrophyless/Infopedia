@@ -29,11 +29,7 @@ class FeatureUsageMiddleware(BaseMiddleware):
             session = data.get("session")
             user_id = event.from_user.id
 
-            await log_feature_usage(
-                session,
-                user_id=user_id,
-                feature=log_feature
-            )
+            await log_feature_usage(session, user_id=user_id, feature=log_feature)
 
         logger.debug("Выходим из MenuHistoryMiddleware")
 

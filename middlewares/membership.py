@@ -23,7 +23,9 @@ class MembershipMiddleware(BaseMiddleware):
         user: User = data.get("event_from_user")
 
         if user is None:
-            logger.warning("По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий \"обработчик\"")
+            logger.warning(
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+            )
             return await handler(event, data)
 
         username: str = user.username if user.username else user.first_name
@@ -35,7 +37,10 @@ class MembershipMiddleware(BaseMiddleware):
         db_user: Users = data.get("db_user")
 
         if db_user is None:
-            logger.debug("Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"", username)
+            logger.debug(
+                "Данные о пользователе с `username`='%s' не удалось получить из базы данных, переходим в следующий \"обработчик\"",
+                username,
+            )
             return await handler(event, data)
 
         is_following = await is_user_followed(bot, user.id, channel_id)
@@ -45,14 +50,17 @@ class MembershipMiddleware(BaseMiddleware):
         if not is_following:
             logger.debug(
                 "Пользователь с `username`='%s' был не подписан, устанавливаем состояние ожидания подписки, переходим в следующий \"обработчик\"",
-                username)
+                username,
+            )
             if await_membership:
                 data["await_membership"] = True
             else:
                 data["await_membership"] = None
         else:
-            logger.debug("Пользователь с `username`='%s' был подписан, переходим в следующий \"обработчик\"", username)
-
+            logger.debug(
+                "Пользователь с `username`='%s' был подписан, переходим в следующий \"обработчик\"",
+                username,
+            )
 
         result = await handler(event, data)
 

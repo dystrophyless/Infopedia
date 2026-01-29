@@ -3,6 +3,7 @@ from typing import Optional
 
 from environs import Env
 
+
 @dataclass
 class BotSettings:
     token: str
@@ -11,6 +12,7 @@ class BotSettings:
     channel_link: str
     admin_ids: list[int]
     signature: str
+
 
 @dataclass
 class DatabaseSettings:
@@ -29,6 +31,7 @@ class RedisSettings:
     password: str
     username: str
 
+
 @dataclass
 class Config:
     bot: BotSettings
@@ -36,18 +39,17 @@ class Config:
     redis: RedisSettings
 
 
-
 def load_config(path: Optional[str] = None) -> Config:
     env: Env = Env()
     env.read_env(path, override=True)
 
     bot = BotSettings(
-        token=env('BOT_TOKEN'),
-        group_id=env('GROUP_ID'),
-        channel_id=env('CHANNEL_ID'),
-        channel_link=env('CHANNEL_LINK'),
-        admin_ids=list(map(int, env.list('ADMIN_ID'))),
-        signature=env('SIGNATURE'),
+        token=env("BOT_TOKEN"),
+        group_id=env("GROUP_ID"),
+        channel_id=env("CHANNEL_ID"),
+        channel_link=env("CHANNEL_LINK"),
+        admin_ids=list(map(int, env.list("ADMIN_ID"))),
+        signature=env("SIGNATURE"),
     )
 
     db = DatabaseSettings(
@@ -66,9 +68,4 @@ def load_config(path: Optional[str] = None) -> Config:
         username=env("REDIS_USERNAME", default=""),
     )
 
-    return Config(
-        bot=bot,
-        db=db,
-        redis=redis
-    )
-
+    return Config(bot=bot, db=db, redis=redis)

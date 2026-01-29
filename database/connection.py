@@ -2,7 +2,12 @@ import logging
 from urllib.parse import quote
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,27 +71,23 @@ def get_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
 async def init_similarity_extension(engine: AsyncEngine):
     try:
         async with engine.begin() as conn:
-            await conn.execute(
-                text(
-                    "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
-                )
-            )
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
             await conn.execute(
                 text(
                     "CREATE INDEX IF NOT EXISTS idx_terms_name_trgm ON terms USING gin (name gin_trgm_ops);"
                 )
             )
     except Exception as e:
-        logger.exception("Не удалось инициализировать расширение для поиска по семантике: %s", e)
+        logger.exception(
+            "Не удалось инициализировать расширение для поиска по семантике: %s", e
+        )
 
 
 async def init_vector_extension(engine: AsyncEngine):
     try:
         async with engine.begin() as conn:
-            await conn.execute(
-                text(
-                    "CREATE EXTENSION IF NOT EXISTS vector;"
-                )
-            )
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
     except Exception as e:
-        logger.exception("Не удалось инициализировать расширение для поиска по семантике: %s", e)
+        logger.exception(
+            "Не удалось инициализировать расширение для поиска по семантике: %s", e
+        )
