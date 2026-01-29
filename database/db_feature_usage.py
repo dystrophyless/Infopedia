@@ -1,8 +1,7 @@
 import logging
-
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import FeatureUsage
@@ -12,7 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 async def log_feature_usage(
-    session: AsyncSession, *, user_id: int, feature: Feature
+    session: AsyncSession,
+    *,
+    user_id: int,
+    feature: Feature,
 ) -> None:
     new_usage = FeatureUsage(user_id=user_id, feature_name=feature.name)
     session.add(new_usage)
@@ -25,7 +27,10 @@ async def log_feature_usage(
 
 
 async def get_users_feature_usage_count(
-    session: AsyncSession, *, user_id: int, feature: Feature
+    session: AsyncSession,
+    *,
+    user_id: int,
+    feature: Feature,
 ) -> int | None:
     threshold = datetime.now() - timedelta(days=30)
 
@@ -34,7 +39,7 @@ async def get_users_feature_usage_count(
             FeatureUsage.user_id == user_id,
             FeatureUsage.feature_name == feature.name,
             FeatureUsage.created_at >= threshold,
-        )
+        ),
     )
 
     usage_count: int = result.scalar_one_or_none()

@@ -5,11 +5,10 @@ import sys
 
 from sqlalchemy.exc import SQLAlchemyError
 
+from config_data.config import Config, load_config
 from database.connection import get_async_engine, init_vector_extension
 from database.models import Base
 from logs.logging_settings import logging_config
-from config_data.config import Config, load_config
-
 
 config: Config = load_config(".env")
 
@@ -37,7 +36,7 @@ async def main():
             await conn.run_sync(Base.metadata.create_all)
 
         logger.debug(
-            "Таблицы `users`, `user_feedback`, `activity`, `terms`, `sources`, `definitions`,  `feature_usage` были успешно созданы"
+            "Таблицы `users`, `user_feedback`, `activity`, `terms`, `sources`, `definitions`,  `feature_usage` были успешно созданы",
         )
 
     except SQLAlchemyError as db_error:

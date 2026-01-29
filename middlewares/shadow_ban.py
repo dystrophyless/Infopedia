@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, User
@@ -22,7 +23,7 @@ class ShadowBanMiddleware(BaseMiddleware):
 
         if user is None:
             logger.warning(
-                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"',
             )
             return await handler(event, data)
 
@@ -47,7 +48,7 @@ class ShadowBanMiddleware(BaseMiddleware):
             )
             if event.callback_query:
                 await event.callback_query.answer()
-            return
+            return None
 
         logger.warning(
             "Пользователь с `username`='%s' не в бане, переходим в следующий \"обработчик\"",

@@ -1,28 +1,27 @@
-import logging
 import asyncio
+import logging
 from contextlib import suppress
 
-from aiogram import Router, Bot, F
+from aiogram import Bot, F, Router
 from aiogram.enums import BotCommandScopeType
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
-from aiogram.filters import StateFilter, MagicData
+from aiogram.filters import MagicData, StateFilter
 from aiogram.fsm.context import FSMContext
-
+from aiogram.types import BotCommandScopeChat, CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fsm.states import FSMRegister
-from enums.roles import UserRole
+from database.db import add_user
 from enums.grades import UserGrade
-from services.membership import is_user_followed
+from enums.roles import UserRole
+from fsm.states import FSMRegister
 from keyboards.inline_keyboards import (
     build_channel_kb,
-    build_language_kb,
     build_grade_kb,
+    build_language_kb,
 )
 from keyboards.main_menu import build_menu_kb
 from keyboards.menu_commands import get_main_menu_commands
-from database.db import add_user
+from services.membership import is_user_followed
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,8 @@ async def process_start_registration(
 ):
     if await is_user_followed(bot, message.from_user.id, channel_id):
         msg = await message.answer(
-            text=i18n.get("choose_language"), reply_markup=build_language_kb(i18n)
+            text=i18n.get("choose_language"),
+            reply_markup=build_language_kb(i18n),
         )
         await state.set_state(FSMRegister.choose_language)
         await state.update_data(registration_msg_id=msg.message_id)
@@ -58,15 +58,21 @@ async def process_start_registration(
         else message.from_user.first_name
     )
     logger.debug(
-        "Пользователь с `username`='%s' начал проходить этап регистрации", username
+        "Пользователь с `username`='%s' начал проходить этап регистрации",
+        username,
     )
 
 
 @router.callback_query(
-    F.data == "check_membership", StateFilter(FSMRegister.await_membership)
+    F.data == "check_membership",
+    StateFilter(FSMRegister.await_membership),
 )
 async def process_channel_link_press(
-    callback: CallbackQuery, bot: Bot, state: FSMContext, channel_id: str, i18n: dict
+    callback: CallbackQuery,
+    bot: Bot,
+    state: FSMContext,
+    channel_id: str,
+    i18n: dict,
 ):
     username: str = (
         callback.from_user.username
@@ -87,7 +93,8 @@ async def process_channel_link_press(
         await callback.message.edit_text(text=i18n.get("successful_membership"))
 
         msg_id = await callback.message.answer(
-            text=i18n.get("choose_language"), reply_markup=build_language_kb(i18n)
+            text=i18n.get("choose_language"),
+            reply_markup=build_language_kb(i18n),
         )
         await state.set_state(FSMRegister.choose_language)
         await state.update_data(registration_msg_id=msg_id.message_id)
@@ -101,7 +108,11 @@ async def process_channel_link_press(
 
 @router.message(StateFilter(FSMRegister.await_membership))
 async def process_failed_to_channel_link_press(
-    message: Message, bot: Bot, i18n: dict, channel_link: str, state: FSMContext
+    message: Message,
+    bot: Bot,
+    i18n: dict,
+    channel_link: str,
+    state: FSMContext,
 ):
     user_id = message.from_user.id
 
@@ -119,10 +130,14 @@ async def process_failed_to_channel_link_press(
 
 
 @router.callback_query(
-    F.data.in_(["kz", "ru"]), StateFilter(FSMRegister.choose_language)
+    F.data.in_(["kz", "ru"]),
+    StateFilter(FSMRegister.choose_language),
 )
 async def process_choosing_language(
-    callback: CallbackQuery, bot: Bot, state: FSMContext, i18n: dict
+    callback: CallbackQuery,
+    bot: Bot,
+    state: FSMContext,
+    i18n: dict,
 ):
     await callback.message.edit_text(
         text=i18n.get("choose_grade").format(user_language=i18n.get(callback.data)),
@@ -136,14 +151,18 @@ async def process_choosing_language(
     await bot.set_my_commands(
         commands=get_main_menu_commands(i18n=i18n, role=user_role),
         scope=BotCommandScopeChat(
-            type=BotCommandScopeType.CHAT, chat_id=callback.from_user.id
+            type=BotCommandScopeType.CHAT,
+            chat_id=callback.from_user.id,
         ),
     )
 
 
 @router.message(StateFilter(FSMRegister.choose_language))
 async def process_failed_to_choose_language(
-    message: Message, bot: Bot, i18n: dict, state: FSMContext
+    message: Message,
+    bot: Bot,
+    i18n: dict,
+    state: FSMContext,
 ):
     user_id = message.from_user.id
 
@@ -153,7 +172,8 @@ async def process_failed_to_choose_language(
             await bot.delete_message(chat_id=user_id, message_id=msg_id)
 
     msg_id = await message.answer(
-        text=i18n.get("choose_language"), reply_markup=build_language_kb(i18n)
+        text=i18n.get("choose_language"),
+        reply_markup=build_language_kb(i18n),
     )
 
     await state.update_data(registration_msg_id=msg_id.message_id)
@@ -164,7 +184,10 @@ async def process_failed_to_choose_language(
     StateFilter(FSMRegister.choose_grade),
 )
 async def process_choosing_grade(
-    callback: CallbackQuery, state: FSMContext, i18n: dict, session: AsyncSession
+    callback: CallbackQuery,
+    state: FSMContext,
+    i18n: dict,
+    session: AsyncSession,
 ):
     user_id: int = callback.from_user.id
     username: str = callback.from_user.username if callback.from_user.username else None
@@ -184,7 +207,7 @@ async def process_choosing_grade(
     )
 
     await callback.message.edit_text(
-        text=i18n.get("finish_registration").format(user_grade=i18n.get(callback.data))
+        text=i18n.get("finish_registration").format(user_grade=i18n.get(callback.data)),
     )
 
     await state.update_data(user_role=None, user_language=None)
@@ -195,7 +218,8 @@ async def process_choosing_grade(
     await callback.message.delete()
 
     msg_id = await callback.message.answer(
-        text=i18n.get("thanks_for_registration"), reply_markup=build_menu_kb(i18n)
+        text=i18n.get("thanks_for_registration"),
+        reply_markup=build_menu_kb(i18n),
     )
 
     await state.update_data(registration_msg_id=msg_id.message_id)
@@ -203,7 +227,10 @@ async def process_choosing_grade(
 
 @router.message(StateFilter(FSMRegister.choose_grade))
 async def process_failed_to_choose_grade(
-    message: Message, bot: Bot, i18n: dict, state: FSMContext
+    message: Message,
+    bot: Bot,
+    i18n: dict,
+    state: FSMContext,
 ):
     user_id = message.from_user.id
 

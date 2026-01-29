@@ -1,25 +1,24 @@
 import logging
 
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import Command, CommandObject
-
+from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from enums.roles import UserRole
-from schemas.user import UserStat
-from schemas.feedback import FeedbackStat
-from filters.filters import UserRoleFilter
 from database.db import (
-    get_activity_statistics_individually,
-    get_user_banned_status_by_id,
-    get_user_banned_status_by_username,
     change_user_banned_status_by_id,
     change_user_banned_status_by_username,
-    get_search_statistics_individually,
-    get_search_statistics_generally,
     get_activity_statistics_generally,
+    get_activity_statistics_individually,
+    get_search_statistics_generally,
+    get_search_statistics_individually,
+    get_user_banned_status_by_id,
+    get_user_banned_status_by_username,
 )
+from enums.roles import UserRole
+from filters.filters import UserRoleFilter
+from schemas.feedback import FeedbackStat
+from schemas.user import UserStat
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,9 @@ async def process_admin_help_command(message: Message, i18n: dict):
 
 @router.message(Command(commands=["stats"]))
 async def process_admin_statistics_command(
-    message: Message, session: AsyncSession, i18n: dict
+    message: Message,
+    session: AsyncSession,
+    i18n: dict,
 ):
     statistics: list[UserStat] = await get_activity_statistics_individually(session)
     total_actions = await get_activity_statistics_generally(session)
@@ -49,7 +50,7 @@ async def process_admin_statistics_command(
                     for i, stat in enumerate(statistics, 1)
                 ),
                 total_actions=total_actions,
-            )
+            ),
         )
     else:
         await message.answer(text=i18n.get("stats_were_not_found"))
@@ -57,7 +58,9 @@ async def process_admin_statistics_command(
 
 @router.message(Command(commands=["feedback"]))
 async def process_admin_feedback_command(
-    message: Message, session: AsyncSession, i18n: dict
+    message: Message,
+    session: AsyncSession,
+    i18n: dict,
 ):
     statistics: list[FeedbackStat] = await get_search_statistics_individually(session)
     total_queries, total_accuracy = await get_search_statistics_generally(session)
@@ -71,7 +74,7 @@ async def process_admin_feedback_command(
                 ),
                 total_queries=total_queries,
                 total_accuracy=f"~{total_accuracy}%",
-            )
+            ),
         )
     else:
         await message.answer(text=i18n.get("feedback_was_not_found"))
@@ -79,7 +82,10 @@ async def process_admin_feedback_command(
 
 @router.message(Command(commands=["ban"]))
 async def process_admin_ban_command(
-    message: Message, command: CommandObject, session: AsyncSession, i18n: dict
+    message: Message,
+    command: CommandObject,
+    session: AsyncSession,
+    i18n: dict,
 ):
     args = command.args
 
@@ -91,11 +97,13 @@ async def process_admin_ban_command(
 
     if arg_user.isdigit():
         banned_status = await get_user_banned_status_by_id(
-            session, user_id=int(arg_user)
+            session,
+            user_id=int(arg_user),
         )
     elif arg_user.startswith("@"):
         banned_status = await get_user_banned_status_by_username(
-            session, username=arg_user[1:]
+            session,
+            username=arg_user[1:],
         )
     else:
         await message.reply(text=i18n.get("incorrect_ban_argument"))
@@ -108,11 +116,15 @@ async def process_admin_ban_command(
     else:
         if arg_user.isdigit():
             await change_user_banned_status_by_id(
-                session, user_id=int(arg_user), banned=True
+                session,
+                user_id=int(arg_user),
+                banned=True,
             )
         else:
             await change_user_banned_status_by_username(
-                session, username=arg_user[1:], banned=True
+                session,
+                username=arg_user[1:],
+                banned=True,
             )
 
         await message.reply(text=i18n.get("successfully_banned"))
@@ -120,7 +132,10 @@ async def process_admin_ban_command(
 
 @router.message(Command(commands=["unban"]))
 async def process_admin_unban_command(
-    message: Message, command: CommandObject, session: AsyncSession, i18n: dict
+    message: Message,
+    command: CommandObject,
+    session: AsyncSession,
+    i18n: dict,
 ):
     args = command.args
 
@@ -132,11 +147,13 @@ async def process_admin_unban_command(
 
     if arg_user.isdigit():
         banned_status = await get_user_banned_status_by_id(
-            session, user_id=int(arg_user)
+            session,
+            user_id=int(arg_user),
         )
     elif arg_user.startswith("@"):
         banned_status = await get_user_banned_status_by_username(
-            session, username=arg_user[1:]
+            session,
+            username=arg_user[1:],
         )
     else:
         await message.reply(text=i18n.get("incorrect_unban_argument"))
@@ -147,11 +164,15 @@ async def process_admin_unban_command(
     elif banned_status:
         if arg_user.isdigit():
             await change_user_banned_status_by_id(
-                session, user_id=int(arg_user), banned=False
+                session,
+                user_id=int(arg_user),
+                banned=False,
             )
         else:
             await change_user_banned_status_by_username(
-                session, username=arg_user[1:], banned=False
+                session,
+                username=arg_user[1:],
+                banned=False,
             )
 
         await message.reply(text=i18n.get("successfully_unbanned"))

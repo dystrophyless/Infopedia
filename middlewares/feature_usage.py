@@ -1,9 +1,10 @@
 import logging
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject
 from aiogram.dispatcher.flags import get_flag
+from aiogram.types import TelegramObject
 
 from database.db import log_feature_usage
 

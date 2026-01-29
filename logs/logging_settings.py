@@ -7,7 +7,7 @@ logging_config = {
         "default": {
             "format": "[{asctime}] #{levelname:8} {filename}:{lineno} - {message}",
             "style": "{",
-        }
+        },
     },
     "handlers": {
         "default": {

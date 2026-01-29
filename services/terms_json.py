@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Any
+from typing import Any
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -8,17 +8,17 @@ INCOMING_PATH = os.path.join(BASE_DIR, "database", "incoming_terms.json")
 TARGET_PATH = os.path.join(BASE_DIR, "database", "terms.json")
 
 
-def load_json(path: str) -> Dict[str, Any]:
+def load_json(path: str) -> dict[str, Any]:
     if not os.path.exists(path):
         return {}
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         raw = f.read().strip()
         if not raw:
             return {}
         return json.loads(raw) or {}
 
 
-def save_json(path: str, data: Dict[str, Any]) -> None:
+def save_json(path: str, data: dict[str, Any]) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -41,8 +41,7 @@ def capitalise_first_letter(text: str) -> str:
 
 
 def normalise_incoming_data(data: dict) -> dict:
-    """
-    - Делает первую букву term_name заглавной
+    """- Делает первую букву term_name заглавной
     - Делает первую букву definition заглавной
     """
     normalised = {}
@@ -81,9 +80,8 @@ def normalise_incoming_data(data: dict) -> dict:
     return normalised
 
 
-def merge_terms(target: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Формат:
+def merge_terms(target: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+    """Формат:
     {
       "Term": {
          "Source A": [ {definition, topic, page}, ... ],
@@ -97,11 +95,11 @@ def merge_terms(target: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, A
     """
     if not isinstance(target, dict):
         raise ValueError(
-            "terms.json должен быть JSON-объектом (dict) на верхнем уровне."
+            "terms.json должен быть JSON-объектом (dict) на верхнем уровне.",
         )
     if not isinstance(incoming, dict):
         raise ValueError(
-            "incoming_terms.json должен быть JSON-объектом (dict) на верхнем уровне."
+            "incoming_terms.json должен быть JSON-объектом (dict) на верхнем уровне.",
         )
 
     for term, sources in incoming.items():
@@ -128,7 +126,8 @@ def merge_terms(target: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, A
 
             # если источника нет — добавляем целиком
             if source not in target[term] or not isinstance(
-                target[term].get(source), list
+                target[term].get(source),
+                list,
             ):
                 target[term][source] = items
                 continue

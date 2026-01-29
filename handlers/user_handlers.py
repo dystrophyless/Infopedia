@@ -90,10 +90,12 @@ async def process_help_command(
 
 
 @router.callback_query(
-    F.data == "find_term_by_definition", UserRoleFilter(UserRole.CLIENT, UserRole.ADMIN)
+    F.data == "find_term_by_definition",
+    UserRoleFilter(UserRole.CLIENT, UserRole.ADMIN),
 )
 @router.callback_query(
-    F.data == "find_term_by_definition", FeatureAccessFilter(Feature.DEFINITION_SEARCH)
+    F.data == "find_term_by_definition",
+    FeatureAccessFilter(Feature.DEFINITION_SEARCH),
 )
 async def process_find_term_by_definition(
     callback: CallbackQuery,
@@ -143,7 +145,7 @@ async def process_no_access_to_get_term_by_definition(
     await state.update_data(from_menu=None)
     await callback.message.answer(
         text=i18n.get(Feature.DEFINITION_SEARCH.forbidden).format(
-            usage_limit=Feature.DEFINITION_SEARCH.limit
+            usage_limit=Feature.DEFINITION_SEARCH.limit,
         ),
         reply_markup=build_buy_subscription_kb(i18n, user_role=db_user.role),
     )
@@ -175,7 +177,9 @@ async def process_appropriate_definition(
     status_msg = await message.answer(i18n.get("awaiting_response"))
 
     progress = ProgressiveMessage(
-        message=status_msg, update_interval=0.8, default_min_stage_time=0.0
+        message=status_msg,
+        update_interval=0.8,
+        default_min_stage_time=0.0,
     )
     progress.set_stage_mapping(
         {
@@ -183,7 +187,7 @@ async def process_appropriate_definition(
             "searching": (i18n.get("step_searching"), 3.6),
             "reranking": (i18n.get("step_clarifying"), 1.8),
             "deciding": (i18n.get("step_preparing"), 1.8),
-        }
+        },
     )
     await progress.start()
 
@@ -314,7 +318,8 @@ async def process_failed_to_consider_definition(
     ActionPayloadFilter("get_term_info"),
 )
 @router.message(
-    FeatureAccessFilter(Feature.TERM_SEARCH), ActionPayloadFilter("get_term_info")
+    FeatureAccessFilter(Feature.TERM_SEARCH),
+    ActionPayloadFilter("get_term_info"),
 )
 @flags.log_feature(feature=Feature.TERM_SEARCH)
 async def process_getting_term_info(
@@ -326,7 +331,9 @@ async def process_getting_term_info(
 ):
     try:
         text, kb = await term_service.get_term(
-            session, term_name=payload["term"], i18n=i18n
+            session,
+            term_name=payload["term"],
+            i18n=i18n,
         )
         await message.answer(
             text=text,
@@ -352,7 +359,7 @@ async def process_no_access_to_get_term_info(
     await state.update_data(from_menu=None)
     await message.answer(
         text=i18n.get(Feature.TERM_SEARCH.forbidden).format(
-            usage_limit=Feature.TERM_SEARCH.limit
+            usage_limit=Feature.TERM_SEARCH.limit,
         ),
         reply_markup=build_buy_subscription_kb(i18n, user_role=db_user.role),
     )
@@ -389,7 +396,7 @@ async def process_definition_suggestion(
         else message.from_user.first_name
     )
     logger.debug(
-        f"Пользователь {username} хочет предложить следующий термин с `name`=`{suggested_term}`"
+        f"Пользователь {username} хочет предложить следующий термин с `name`=`{suggested_term}`",
     )
 
 

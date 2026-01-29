@@ -1,13 +1,11 @@
-import hmac
-import hashlib
 import base64
-import time
+import hashlib
+import hmac
 import json
 import logging
-from typing import Optional
+import time
 
 from config_data.config import Config, load_config
-
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +20,10 @@ def generate_payload(data: dict) -> str:
     data["ts"] = int(time.time())
 
     payload_json = json.dumps(
-        data, separators=(",", ":"), ensure_ascii=False, sort_keys=True
+        data,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        sort_keys=True,
     )
     payload_raw = payload_json.encode()
 
@@ -36,7 +37,7 @@ def generate_payload(data: dict) -> str:
     return f'<span class="tg-spoiler">{data["action"]}:{full}</span>'
 
 
-def verify_payload(spoiler_text: str, max_uses: int = 1) -> Optional[dict]:
+def verify_payload(spoiler_text: str, max_uses: int = 1) -> dict | None:
     try:
         action, encoded = spoiler_text.split(":", 1)
         encoded_payload, encoded_sig = encoded.split(".", 1)

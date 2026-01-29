@@ -3,8 +3,7 @@ import logging
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Term, Source
-
+from database.models import Source, Term
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +45,9 @@ async def get_source_by_id(session: AsyncSession, *, id: int) -> Source | None:
 
 
 async def get_random_terms(
-    session: AsyncSession, *, quantity: int
+    session: AsyncSession,
+    *,
+    quantity: int,
 ) -> list[Term] | None:
     result = await session.execute(select(Term).order_by(func.random()).limit(quantity))
 
@@ -60,11 +61,15 @@ async def get_random_terms(
 
 
 async def search_terms_by_prefix(
-    session: AsyncSession, *, query: str, limit: int = 10, prefix: bool = True
+    session: AsyncSession,
+    *,
+    query: str,
+    limit: int = 10,
+    prefix: bool = True,
 ) -> list[Term] | None:
     like: str = f"{query}%" if prefix else f"%{query}%"
     result = await session.execute(
-        select(Term).where(Term.name.ilike(like)).limit(limit)
+        select(Term).where(Term.name.ilike(like)).limit(limit),
     )
 
     if result is None:
@@ -89,12 +94,13 @@ async def search_terms_by_similarity(
         select(Term)
         .where(Term.name.op("%")(query))
         .order_by(func.similarity(Term.name, query).desc())
-        .limit(limit)
+        .limit(limit),
     )
 
     if result is None:
         logger.debug(
-            "Не удалось получить термины похожие на `query=%s` из базы данных", query
+            "Не удалось получить термины похожие на `query=%s` из базы данных",
+            query,
         )
         return None
 

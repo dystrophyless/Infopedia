@@ -1,12 +1,13 @@
 import json
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from database.models import Term, Source, Definition
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database.models import Definition, Source, Term
 
 
 async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
     for term_name, sources in data.items():
@@ -21,8 +22,9 @@ async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
         for source_name, defs in sources.items():
             result = await session.execute(
                 select(Source).where(
-                    Source.term_id == term.id, Source.name == source_name
-                )
+                    Source.term_id == term.id,
+                    Source.name == source_name,
+                ),
             )
             source = result.scalar_one_or_none()
 
@@ -38,7 +40,7 @@ async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
                         Definition.text == d["definition"],
                         Definition.topic == d.get("topic"),
                         Definition.page == d.get("page"),
-                    )
+                    ),
                 )
                 definition = result.scalar_one_or_none()
 

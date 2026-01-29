@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+
 import numpy as np
 
-from database.models import Term, Source, Definition
+from database.models import Definition, Source, Term
 
 
 class ITermBuilder(ABC):
@@ -19,7 +20,11 @@ class ITermBuilder(ABC):
 
     @abstractmethod
     def add_definition(
-        self, *, text: str, topic: str | None = None, page: int | None = None
+        self,
+        *,
+        text: str,
+        topic: str | None = None,
+        page: int | None = None,
     ) -> "ITermBuilder":
         pass
 
@@ -64,11 +69,15 @@ class TermBuilder(ITermBuilder):
         return self
 
     def add_definition(
-        self, *, text: str, topic: str | None = None, page: int | None = None
+        self,
+        *,
+        text: str,
+        topic: str | None = None,
+        page: int | None = None,
     ) -> "TermBuilder":
         if self.current_source is None:
             raise ValueError(
-                "Перед добавлением определения необходимо добавить источник."
+                "Перед добавлением определения необходимо добавить источник.",
             )
 
         if not text or not text.strip():
@@ -83,7 +92,9 @@ class TermBuilder(ITermBuilder):
 
         if self.embedder is not None:
             embedding = self.embedder.encode(
-                definition.text, convert_to_numpy=True, normalize_embeddings=True
+                definition.text,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
             )
             definition.embedding = np.asarray(embedding).ravel().tolist()
 
@@ -104,7 +115,7 @@ class TermBuilder(ITermBuilder):
         for source in self.term.sources:
             if not source.definitions:
                 raise ValueError(
-                    f"Источник '{source.name}' не содержит ни одного определения."
+                    f"Источник '{source.name}' не содержит ни одного определения.",
                 )
 
         term = self.term

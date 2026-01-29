@@ -25,7 +25,7 @@ def build_pg_conninfo(
     )
     logger.debug(
         "Строка для подключения PostgreSQL была создана (пароль скрыт): "
-        f"postgresql+psycopg://{quote(user, safe='')}@{host}:{port}/{db_name}"
+        f"postgresql+psycopg://{quote(user, safe='')}@{host}:{port}/{db_name}",
     )
     return conninfo
 
@@ -74,12 +74,13 @@ async def init_similarity_extension(engine: AsyncEngine):
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
             await conn.execute(
                 text(
-                    "CREATE INDEX IF NOT EXISTS idx_terms_name_trgm ON terms USING gin (name gin_trgm_ops);"
-                )
+                    "CREATE INDEX IF NOT EXISTS idx_terms_name_trgm ON terms USING gin (name gin_trgm_ops);",
+                ),
             )
     except Exception as e:
         logger.exception(
-            "Не удалось инициализировать расширение для поиска по семантике: %s", e
+            "Не удалось инициализировать расширение для поиска по семантике: %s",
+            e,
         )
 
 
@@ -89,5 +90,6 @@ async def init_vector_extension(engine: AsyncEngine):
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
     except Exception as e:
         logger.exception(
-            "Не удалось инициализировать расширение для поиска по семантике: %s", e
+            "Не удалось инициализировать расширение для поиска по семантике: %s",
+            e,
         )

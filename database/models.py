@@ -1,24 +1,25 @@
-from datetime import datetime, date
+from datetime import date, datetime
+
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    text,
-    Integer,
     BigInteger,
-    String,
-    Text,
+    Boolean,
     Date,
     DateTime,
-    Boolean,
-    UniqueConstraint,
+    Enum,
     ForeignKey,
     Index,
-    Enum,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from pgvector.sqlalchemy import Vector
 
-from enums.roles import UserRole
-from enums.grades import UserGrade
 from enums.features import Feature
+from enums.grades import UserGrade
+from enums.roles import UserRole
 
 
 class Base(DeclarativeBase):
@@ -39,22 +40,26 @@ class Users(Base):
     )
     language: Mapped[str] = mapped_column(String(2), nullable=False)
     grade: Mapped[UserGrade] = mapped_column(
-        Enum(UserGrade, native_enum=False), nullable=False
+        Enum(UserGrade, native_enum=False),
+        nullable=False,
     )
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, native_enum=False), nullable=False
+        Enum(UserRole, native_enum=False),
+        nullable=False,
     )
     is_alive: Mapped[bool] = mapped_column(Boolean, nullable=False)
     banned: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     # back_populates ссылается на атрибут 'user' в классе Activity
     activities: Mapped[list["Activity"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     # back_populates ссылается на атрибут 'user' в классе FeatureUsage
     feature_usages: Mapped[list["FeatureUsage"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
 
@@ -66,7 +71,9 @@ class Activity(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id"), nullable=False
+        BigInteger,
+        ForeignKey("users.user_id"),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -74,7 +81,9 @@ class Activity(Base):
         server_default=text("TIMEZONE('utc', now())"),
     )
     activity_date: Mapped[date] = mapped_column(
-        Date, nullable=False, default=date.today
+        Date,
+        nullable=False,
+        default=date.today,
     )
     actions: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -90,10 +99,13 @@ class FeatureUsage(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id"), nullable=False
+        BigInteger,
+        ForeignKey("users.user_id"),
+        nullable=False,
     )
     feature_name: Mapped[Feature] = mapped_column(
-        Enum(Feature, native_enum=False), nullable=False
+        Enum(Feature, native_enum=False),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -112,7 +124,9 @@ class Term(Base):
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
     sources: Mapped[list["Source"]] = relationship(
-        back_populates="term", lazy="selectin", cascade="all, delete-orphan"
+        back_populates="term",
+        lazy="selectin",
+        cascade="all, delete-orphan",
     )
 
 
@@ -121,13 +135,17 @@ class Source(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     term_id: Mapped[int] = mapped_column(
-        ForeignKey("terms.id"), nullable=False, index=True
+        ForeignKey("terms.id"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     term: Mapped["Term"] = relationship(back_populates="sources")
     definitions: Mapped[list["Definition"]] = relationship(
-        back_populates="source", lazy="selectin", cascade="all, delete-orphan"
+        back_populates="source",
+        lazy="selectin",
+        cascade="all, delete-orphan",
     )
 
 
@@ -145,7 +163,9 @@ class Definition(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     source_id: Mapped[int] = mapped_column(
-        ForeignKey("sources.id"), nullable=False, index=True
+        ForeignKey("sources.id"),
+        nullable=False,
+        index=True,
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
     topic: Mapped[str] = mapped_column(String(255))
@@ -160,10 +180,15 @@ class UserFeedback(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id"), nullable=False, index=True
+        BigInteger,
+        ForeignKey("users.user_id"),
+        nullable=False,
+        index=True,
     )
     definition_id: Mapped[int] = mapped_column(
-        ForeignKey("definitions.id"), nullable=False, index=True
+        ForeignKey("definitions.id"),
+        nullable=False,
+        index=True,
     )
     query: Mapped[str] = mapped_column(Text, nullable=False)
     correct: Mapped[bool] = mapped_column(Boolean, nullable=False)

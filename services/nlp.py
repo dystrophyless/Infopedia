@@ -1,5 +1,5 @@
-from sentence_transformers import SentenceTransformer, CrossEncoder
 import torch
+from sentence_transformers import CrossEncoder, SentenceTransformer
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 

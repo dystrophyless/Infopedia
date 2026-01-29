@@ -1,16 +1,19 @@
 import logging
 from html import escape
 
-from database.models import Term, Source, Definition
-from keyboards.inline_keyboards import build_sources_kb
+from database.models import Definition, Source, Term
 from exceptions import NoSourcesFoundError
-
+from keyboards.inline_keyboards import build_sources_kb
 
 logger = logging.getLogger(__name__)
 
 
 async def get_term_info(
-    *, term: Term, source: Source = None, index: int = 0, i18n: dict
+    *,
+    term: Term,
+    source: Source = None,
+    index: int = 0,
+    i18n: dict,
 ):
     if source is None:
         sources: list[Source] = term.sources
@@ -20,7 +23,10 @@ async def get_term_info(
     definition, topic, page = await _get_term_details(source=source, index=index)
 
     text = i18n.get("get_term_info").format(
-        term=term.name, text=definition, topic=topic, page=page
+        term=term.name,
+        text=definition,
+        topic=topic,
+        page=page,
     )
     kb = build_sources_kb(term=term, current_source=source, current_index=index)
 
@@ -37,7 +43,7 @@ async def _get_term_details(
 
     if not definitions:
         logging.debug(
-            f"У источника {source} не найдены дефиниции для термина {term_name}."
+            f"У источника {source} не найдены дефиниции для термина {term_name}.",
         )
         raise NoSourcesFoundError
 

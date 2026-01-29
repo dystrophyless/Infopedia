@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections import deque
-from typing import Mapping, Union, Tuple, Deque, Optional
+from collections.abc import Mapping
 
 from aiogram.types import Message
 
@@ -17,17 +17,17 @@ class ProgressiveMessage:
         self.message = message
 
         self._stop_event = asyncio.Event()
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
 
         self._stage_text: dict[str, str] = {}
 
         self._stage_min_time: dict[str, float] = {}
         self._default_min_stage_time = float(default_min_stage_time)
 
-        self._current_stage: Optional[str] = None
+        self._current_stage: str | None = None
         self._stage_started_at: float = 0.0
 
-        self._stage_queue: Deque[str] = deque()
+        self._stage_queue: deque[str] = deque()
 
         self._dots = ["...", "..", "."]
         self._dot_index = 0
@@ -35,7 +35,7 @@ class ProgressiveMessage:
 
         self._lock = asyncio.Lock()
 
-    def set_stage_mapping(self, mapping: Mapping[str, Union[str, Tuple[str, float]]]):
+    def set_stage_mapping(self, mapping: Mapping[str, str | tuple[str, float]]):
         self._stage_text.clear()
         self._stage_min_time.clear()
 

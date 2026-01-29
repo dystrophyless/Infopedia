@@ -1,10 +1,9 @@
 import logging
-from typing import Any, Awaitable, Callable
-
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, User
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.db import add_user_activity
@@ -26,7 +25,7 @@ class ActivityCounterMiddleware(BaseMiddleware):
 
         if user is None:
             logger.warning(
-                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"'
+                'По какой-то неизвестной причине пользователя не удалось определить, переходим в следующий "обработчик"',
             )
             return await handler(event, data)
 
@@ -44,7 +43,8 @@ class ActivityCounterMiddleware(BaseMiddleware):
             return result
 
         logger.debug(
-            "Добавляем активность пользователя с `username`='%s' в БД", username
+            "Добавляем активность пользователя с `username`='%s' в БД",
+            username,
         )
 
         session: AsyncSession = data.get("session")
@@ -52,7 +52,7 @@ class ActivityCounterMiddleware(BaseMiddleware):
         if session is None:
             logger.error("Соединение с базой данных не было найдено в данных мидлвари")
             raise RuntimeError(
-                "Отсутствует соединение с базой данных для того что бы считать активность"
+                "Отсутствует соединение с базой данных для того что бы считать активность",
             )
 
         await add_user_activity(session, user_id=user.id)
