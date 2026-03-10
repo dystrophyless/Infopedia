@@ -8,4 +8,13 @@ __pycache__/
 *.pyo
 *.pyd
 *.log
-database/terms.json
+/database/terms.json
+/database/incoming_terms.json
+/database/backup_terms.json
+/database/codeMappings.json
+/database/mappingStructure.json
+/database/newStructure.json
+/scalene-profile.html
+/test.py
+/profile.json
+
