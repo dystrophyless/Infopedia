@@ -18,7 +18,7 @@ from database.connection import (
     init_similarity_extension,
 )
 from database.db import get_total_terms, get_total_users
-from database.loader import load_terms_from_json
+from database.loader import load_terms_from_json, load_chapters_and_topic_codes, load_books_topics_and_mappings
 from handlers import (
     admin_handlers,
     inline_handlers,
@@ -85,6 +85,12 @@ async def main() -> None:
     sessionmaker = get_sessionmaker(engine)
 
     async with sessionmaker() as session:
+        await load_chapters_and_topic_codes(session, "database/mappingStructure.json")
+        logger.debug("Главы и коды тем успешно загружены в БД")
+
+        await load_books_topics_and_mappings(session, "database/newStructure.json")
+        logger.debug("Книги, темы и их связи успешно загружены в БД")
+
         await load_terms_from_json(session, embedder, "database/terms.json")
         logger.debug("Термины успешно загружены в БД")
 
