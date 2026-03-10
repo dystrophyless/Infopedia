@@ -50,7 +50,7 @@ async def _get_term_details(
     indexed_definition: Definition = definitions[index]
 
     definition: str = escape(indexed_definition.text)
-    topic: str = escape(indexed_definition.topic)
+    topic: str = escape(indexed_definition.topic.name)
     page: int = indexed_definition.page
 
     return definition, topic, page
