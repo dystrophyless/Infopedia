@@ -243,7 +243,7 @@ class DefinitionService:
             "term": definition.source.term.name,
             "source": definition.source.name,
             "text": definition.text,
-            "topic": definition.topic,
+            "topic": definition.topic.name,
             "page": definition.page,
         }
 
