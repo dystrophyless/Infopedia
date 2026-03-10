@@ -48,8 +48,16 @@ async def add_user(
     )
 
 
-async def get_user(session: AsyncSession, *, user_id: int) -> Users | None:
-    result = await session.execute(select(Users).where(Users.user_id == user_id))
+async def get_user(
+    session: AsyncSession,
+    *,
+    user_id: int
+) -> Users | None:
+    query = (
+        select(Users)
+        .where(Users.user_id == user_id)
+    )
+    result = await session.execute(query)
 
     user = result.scalar_one_or_none()
 
@@ -71,9 +79,12 @@ async def change_user_alive_status(
     is_alive: bool,
     user_id: int,
 ) -> None:
-    result = await session.execute(
-        update(Users).where(Users.user_id == user_id).values(is_alive=is_alive),
+    stmt = (
+        update(Users)
+        .where(Users.user_id == user_id)
+        .values(is_alive=is_alive)
     )
+    result = await session.execute(stmt)
 
     is_alive_in_db = result.scalar_one_or_none()
 
@@ -97,9 +108,12 @@ async def change_user_banned_status_by_id(
     banned: bool,
     user_id: int,
 ) -> None:
-    result = await session.execute(
-        update(Users).where(Users.user_id == user_id).values(banned=banned),
+    stmt = (
+        update(Users)
+        .where(Users.user_id == user_id)
+        .values(banned=banned)
     )
+    result = await session.execute(stmt)
 
     is_banned_in_db = result.scalar_one_or_none()
 
@@ -123,9 +137,12 @@ async def change_user_banned_status_by_username(
     banned: bool,
     username: str,
 ) -> None:
-    result = await session.execute(
-        update(Users).where(Users.username == username).values(banned=banned),
+    stmt = (
+        update(Users)
+        .where(Users.username == username)
+        .values(banned=banned)
     )
+    result = await session.execute(stmt)
 
     is_banned = result.scalar_one_or_none()
 
@@ -149,11 +166,17 @@ async def update_user_language(
     language: str,
     user_id: int,
 ) -> None:
-    result = await session.execute(
-        update(Users).where(Users.user_id == user_id).values(language=language),
+    stmt = (
+        update(Users)
+        .where(Users.user_id == user_id)
+        .values(language=language)
+        .returning(Users.user_id)
     )
+    result = await session.execute(stmt)
 
-    if result.rowcount == 0:
+    updated_user_id: int = result.scalar_one_or_none()
+
+    if updated_user_id is None:
         logger.debug("Попытка обновить язык несуществующему пользователю: %d", user_id)
         return
 
@@ -165,9 +188,11 @@ async def update_user_language(
 
 
 async def get_user_language(session: AsyncSession, *, user_id: int) -> str | None:
-    result = await session.execute(
-        select(Users.language).where(Users.user_id == user_id),
+    query = (
+        select(Users.language)
+        .where(Users.user_id == user_id)
     )
+    result = await session.execute(query)
 
     language: str = result.scalar_one_or_none()
 
@@ -188,9 +213,11 @@ async def get_user_language(session: AsyncSession, *, user_id: int) -> str | Non
 
 
 async def get_user_alive_status(session: AsyncSession, *, user_id: int) -> bool | None:
-    result = await session.execute(
-        select(Users.is_alive).where(Users.user_id == user_id),
+    query = (
+        select(Users.is_alive)
+        .where(Users.user_id == user_id)
     )
+    result = await session.execute(query)
 
     is_alive: bool = result.scalar_one_or_none()
 
@@ -215,7 +242,11 @@ async def get_user_banned_status_by_id(
     *,
     user_id: int,
 ) -> bool | None:
-    result = await session.execute(select(Users.banned).where(Users.user_id == user_id))
+    query = (
+        select(Users.banned)
+        .where(Users.user_id == user_id)
+    )
+    result = await session.execute(query)
 
     banned: bool = result.scalar_one_or_none()
 
@@ -240,9 +271,11 @@ async def get_user_banned_status_by_username(
     *,
     username: str,
 ) -> bool | None:
-    result = await session.execute(
-        select(Users.banned).where(Users.username == username),
+    query = (
+        select(Users.banned)
+        .where(Users.username == username)
     )
+    result = await session.execute(query)
 
     banned: bool = result.scalar_one_or_none()
 
@@ -263,7 +296,10 @@ async def get_user_banned_status_by_username(
 
 
 async def get_user_role(session: AsyncSession, *, user_id: int) -> UserRole | None:
-    result = await session.execute(select(Users.role).where(Users.user_id == user_id))
+    query = (
+        select(Users.role).where(Users.user_id == user_id)
+    )
+    result = await session.execute(query)
 
     role: UserRole = result.scalar_one_or_none()
 
@@ -284,7 +320,11 @@ async def get_user_role(session: AsyncSession, *, user_id: int) -> UserRole | No
 
 
 async def get_user_grade(session: AsyncSession, *, user_id: int) -> UserGrade | None:
-    result = await session.execute(select(Users.grade).where(Users.user_id == user_id))
+    query = (
+        select(Users.grade)
+        .where(Users.user_id == user_id)
+    )
+    result = await session.execute(query)
 
     grade: UserGrade = result.scalar_one_or_none()
 
