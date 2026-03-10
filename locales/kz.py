@@ -72,7 +72,7 @@ KZ: dict[str, str] = {
     "definition_was_not_found": "❌ Сіз жіберген анықтамаға ұқсас анықтама таба алмадық.",
     "definition_was_found": "✅ Сіз жіберген анықтамаға ұқсас анықтаманы табылды!",
     "definition_representation": "📌 <b>{term}</b>\n\n"
-    "🔹 {text}\n\n"
+    "{text}\n\n"
     "📖 <b>Кітап:</b> {source}\n"
     "🔖 <b>Тақырып</b>: {topic}\n"
     "📄 <b>Бет</b>: {page}",
@@ -140,7 +140,7 @@ KZ: dict[str, str] = {
     "suggestion_positive_reply": "📝 Сіз келесі терминді ұсындыңыз: <b>{term}</b>.\n\n"
     "❗ Бұл функцияны дұрыс пайдаланбау сіздің аккаунтті ботта бұғаттауға әкелуі мүмкін екенін ескеріңіз.",
     "get_term_info": "📌 <b>{term}</b>\n\n"
-    "🔹 {text}\n\n"
+    "{text}\n\n"
     "🔖 <b>Тақырып</b>: {topic}\n"
     "📄 <b>Бет</b>: {page}\n",
     "term_was_not_found": "❌ Қате орын алды. Термин дерекқордан табылмады.",
