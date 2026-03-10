@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from database.models import Definition, Source, Term
 
@@ -35,9 +35,16 @@ class PrefixSearchStrategy(SearchStrategy):
     ) -> list[Term] | None:
         like_pattern: str = f"{query}%" if self.is_prefix else f"%{query}%"
 
-        result = await session.execute(
-            select(Term).where(Term.name.ilike(like_pattern)).limit(limit),
+        query = (
+            select(Term)
+            .where(Term.name.ilike(like_pattern))
+            .limit(limit)
+            .options(
+                selectinload(Term.sources)
+                .selectinload(Source.definitions)
+            )
         )
+        result = await session.execute(query)
 
         terms = list(result.scalars().all())
 
@@ -60,12 +67,17 @@ class SimilaritySearchStrategy(SearchStrategy):
         query: str,
         limit: int,
     ) -> list[Term] | None:
-        result = await session.execute(
+        query = (
             select(Term)
             .where(Term.name.op("%")(query))
             .order_by(func.similarity(Term.name, query).desc())
-            .limit(limit),
+            .limit(limit)
+            .options(
+                selectinload(Term.sources)
+                .selectinload(Source.definitions)
+            )
         )
+        result = await session.execute(query)
 
         terms = list(result.scalars().all())
 
@@ -99,14 +111,18 @@ class SearchContext:
 
 
 async def get_definition_candidates(session, qvec_list, top_k: int):
-    stmt = (
+    query = (
         select(
             Definition,
             (1 - Definition.embedding.cosine_distance(qvec_list)).label("sim_approx"),
         )
-        .options(selectinload(Definition.source).selectinload(Source.term))
         .order_by(Definition.embedding.cosine_distance(qvec_list))
         .limit(top_k)
+        .options(
+            joinedload(Definition.topic),
+            selectinload(Definition.source)
+            .selectinload(Source.term)
+        )
     )
-    result = await session.execute(stmt)
+    result = await session.execute(query)
     return result.all()
