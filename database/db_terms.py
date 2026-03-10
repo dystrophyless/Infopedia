@@ -1,15 +1,25 @@
 import logging
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Source, Term
+from database.models import Source, Term, Definition
 
 logger = logging.getLogger(__name__)
 
 
 async def get_term_by_name(session: AsyncSession, *, name: str) -> Term | None:
-    result = await session.execute(select(Term).where(Term.name == name))
+    query = (
+        select(Term)
+        .where(Term.name == name)
+        .options(
+            selectinload(Term.sources)
+            .selectinload(Source.definitions)
+            .joinedload(Definition.topic)
+        )
+    )
+    result = await session.execute(query)
 
     if result is None:
         logger.debug("Не удалось получить термин с `name`='%s' из базы данных", name)
@@ -21,7 +31,14 @@ async def get_term_by_name(session: AsyncSession, *, name: str) -> Term | None:
 
 
 async def get_term_by_id(session: AsyncSession, *, id: int) -> Term | None:
-    result = await session.execute(select(Term).where(Term.id == id))
+    query = (
+        select(Term)
+        .where(Term.id == id)
+        .options(
+            selectinload(Term.sources),
+        )
+    )
+    result = await session.execute(query)
 
     if result is None:
         logger.debug("Не удалось получить термин с `id`='%s' из базы данных", id)
@@ -33,7 +50,15 @@ async def get_term_by_id(session: AsyncSession, *, id: int) -> Term | None:
 
 
 async def get_source_by_id(session: AsyncSession, *, id: int) -> Source | None:
-    result = await session.execute(select(Source).where(Source.id == id))
+    query = (
+        select(Source)
+        .where(Source.id == id)
+        .options(
+            selectinload(Source.definitions)
+            .joinedload(Definition.topic)
+        )
+    )
+    result = await session.execute(query)
 
     if result is None:
         logger.debug("Не удалось получить источник с `id`='%s' из базы данных", id)
@@ -49,7 +74,17 @@ async def get_random_terms(
     *,
     quantity: int,
 ) -> list[Term] | None:
-    result = await session.execute(select(Term).order_by(func.random()).limit(quantity))
+    query = (
+        select(Term)
+        .order_by(func.random())
+        .limit(quantity)
+        .options(
+            selectinload(Term.sources)
+            .selectinload(Source.definitions)
+            .joinedload(Definition.topic)
+        )
+    )
+    result = await session.execute(query)
 
     if result is None:
         logger.debug("Не удалось получить рандомные термины из базы данных")
