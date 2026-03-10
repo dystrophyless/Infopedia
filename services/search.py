@@ -5,6 +5,7 @@ from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.db import (
+    get_random_terms,
     PrefixSearchStrategy,
     SearchContext,
     SimilaritySearchStrategy,
@@ -21,9 +22,8 @@ async def _get_ready_random_terms(
     quantity: int,
     user_id: int,
 ) -> list[InlineQueryResultArticle]:
-    from database.db import get_random_terms
-
     results: list[InlineQueryResultArticle] = []
+
     random_terms: list[Term] = await get_random_terms(session, quantity=quantity)
 
     for term in random_terms:
