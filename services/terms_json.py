@@ -30,14 +30,17 @@ def normalise_definition(text: str) -> str:
 
 
 def capitalise_first_letter(text: str) -> str:
-    if not isinstance(text, str):
-        return text
-
     text = text.strip()
     if not text:
         return text
 
     return text[0].upper() + text[1:]
+
+
+def add_dot_to_the_end(text: str) -> str:
+    got_dot: bool = text[-1] == "."
+
+    return text + "." if not got_dot else text
 
 
 def normalise_incoming_data(data: dict) -> dict:
@@ -70,6 +73,7 @@ def normalise_incoming_data(data: dict) -> dict:
 
                 if "definition" in item:
                     item["definition"] = capitalise_first_letter(item["definition"])
+                    item["definition"] = add_dot_to_the_end(item["definition"])
 
                 new_items.append(item)
 
