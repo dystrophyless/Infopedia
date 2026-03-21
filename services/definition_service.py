@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import math
+from html import escape
 from collections.abc import Callable
 
 import numpy as np
@@ -121,7 +122,7 @@ class DefinitionService:
         keyword_bonus = np.zeros(len(candidates))
         for i, (definition, _) in enumerate(candidates):
             try:
-                term_name = definition.source.term.name.lower()
+                term_name = definition.term.name.lower()
                 def_text = definition.text.lower()
                 t_int = len(query_words & set(term_name.split()))
                 d_int = len(query_words & set(def_text.split()))
@@ -154,7 +155,7 @@ class DefinitionService:
         unique_terms = []
         seen_ids = set()
         for item in enriched_sorted:
-            tid = item["definition"].source.term.id
+            tid = item["definition"].term_id
             if tid not in seen_ids:
                 unique_terms.append(item)
                 seen_ids.add(tid)
@@ -167,9 +168,9 @@ class DefinitionService:
                 logger.debug("--- Rerank Rescue Triggered ---")
                 logger.debug(
                     "Moving `%s` (raw: %.4f) above `%s` (raw: %.4f)",
-                    best_by_rerank["definition"].source.term.name,
+                    best_by_rerank["definition"].term.name,
                     best_by_rerank["rerank_raw"],
-                    current_top["definition"].source.term.name,
+                    current_top["definition"].term.name,
                     current_top["rerank_raw"],
                 )
                 unique_terms.remove(best_by_rerank)
@@ -191,7 +192,7 @@ class DefinitionService:
             logger.debug(
                 " #%02d: %s | exact:%.4f | rerank_raw:%.4f | combined:%.4f",
                 idx,
-                info["definition"].source.term.name[:30],
+                info["definition"].term.name[:30],
                 info["exact_norm"],
                 info["rerank_raw"],
                 info["combined"],
@@ -240,10 +241,10 @@ class DefinitionService:
             return None, None
 
         info: dict = {
-            "term": definition.source.term.name,
-            "source": definition.source.name,
-            "text": definition.text,
-            "topic": definition.topic.name,
+            "term": escape(definition.term.name),
+            "book": escape(definition.topic.book.name),
+            "text": escape(definition.text),
+            "topic": escape(definition.topic.name),
             "page": definition.page,
         }
 
