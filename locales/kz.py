@@ -73,7 +73,7 @@ KZ: dict[str, str] = {
     "definition_was_found": "✅ Сіз жіберген анықтамаға ұқсас анықтаманы табылды!",
     "definition_representation": "📌 <b>{term}</b>\n\n"
     "{text}\n\n"
-    "📖 <b>Кітап:</b> {source}\n"
+    "📖 <b>Кітап:</b> {book}\n"
     "🔖 <b>Тақырып</b>: {topic}\n"
     "📄 <b>Бет</b>: {page}",
     "consider_definition": "Пікіріңізбен бөлісуіңізді сұраймыз — бот сіз іздеген анықтаманы таба алды ма?",
