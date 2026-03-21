@@ -4,19 +4,23 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Source, Term, Definition
+from database.models import Book, Topic, Term, Definition
 
 logger = logging.getLogger(__name__)
 
 
-async def get_term_by_name(session: AsyncSession, *, name: str) -> Term | None:
+async def get_term_by_name(
+    session: AsyncSession,
+    *,
+    name: str
+) -> Term | None:
     query = (
         select(Term)
         .where(Term.name == name)
         .options(
-            selectinload(Term.sources)
-            .selectinload(Source.definitions)
+            selectinload(Term.definitions)
             .joinedload(Definition.topic)
+            .joinedload(Topic.book)
         )
     )
     result = await session.execute(query)
@@ -35,7 +39,9 @@ async def get_term_by_id(session: AsyncSession, *, id: int) -> Term | None:
         select(Term)
         .where(Term.id == id)
         .options(
-            selectinload(Term.sources),
+            selectinload(Term.definitions)
+            .joinedload(Definition.topic)
+            .joinedload(Topic.book)
         )
     )
     result = await session.execute(query)
@@ -49,14 +55,10 @@ async def get_term_by_id(session: AsyncSession, *, id: int) -> Term | None:
     return term
 
 
-async def get_source_by_id(session: AsyncSession, *, id: int) -> Source | None:
+async def get_book_by_id(session: AsyncSession, *, id: int) -> Book | None:
     query = (
-        select(Source)
-        .where(Source.id == id)
-        .options(
-            selectinload(Source.definitions)
-            .joinedload(Definition.topic)
-        )
+        select(Book)
+        .where(Book.id == id)
     )
     result = await session.execute(query)
 
@@ -64,9 +66,9 @@ async def get_source_by_id(session: AsyncSession, *, id: int) -> Source | None:
         logger.debug("Не удалось получить источник с `id`='%s' из базы данных", id)
         return None
 
-    source: Source = result.scalar_one_or_none()
+    book: Book = result.scalar_one_or_none()
 
-    return source
+    return book
 
 
 async def get_random_terms(
@@ -79,9 +81,9 @@ async def get_random_terms(
         .order_by(func.random())
         .limit(quantity)
         .options(
-            selectinload(Term.sources)
-            .selectinload(Source.definitions)
+            selectinload(Term.definitions)
             .joinedload(Definition.topic)
+            .joinedload(Topic.book)
         )
     )
     result = await session.execute(query)
