@@ -451,7 +451,7 @@ async def process_definition_change(
         text, kb = await term_service.get_definition(
             session,
             term_id=callback_data.term_id,
-            source_id=callback_data.source_id,
+            book_id=callback_data.book_id,
             index=callback_data.index,
             i18n=i18n,
         )
