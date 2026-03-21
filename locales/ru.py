@@ -73,7 +73,7 @@ RU: dict[str, str] = {
     "definition_was_found": "✅ Мы нашли определение похожее на то, что вы нам отправили!",
     "definition_representation": "📌 <b>{term}</b>\n\n"
     "{text}\n\n"
-    "📖 <b>Книга:</b> {source}\n"
+    "📖 <b>Книга:</b> {book}\n"
     "🔖 <b>Тема</b>: {topic}\n"
     "📄 <b>Страница</b>: {page}",
     "consider_definition": "💭 Пожалуйста, поделитесь с нами своим мнением — смог ли бот найти то определение, которое вы искали?",
