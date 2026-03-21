@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.models import Source, Term
+from database.models import Book, Definition
 from enums.grades import UserGrade
 from utils.callback_factories import TermCallback
 
@@ -201,30 +201,30 @@ def build_suggestion_decision_kb(user_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def build_sources_kb(
+def build_books_kb(
     *,
-    term: Term,
-    current_source: Source,
+    books: list[Book],
+    book_id: int,
+    term_id: int,
+    definitions: list[Definition],
     current_index: int = 0,
 ) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
 
-    sources: list[Source] = term.sources
+    total_indexes: int = len(definitions)
 
-    total_indexes = len(current_source.definitions)
-
-    for source in sources:
-        if source.name == current_source.name:
+    for book in books:
+        if book.id == book_id:
             kb_builder.row(
-                InlineKeyboardButton(text=f"✅ {source.name}", callback_data="noop"),
+                InlineKeyboardButton(text=f"✅ {book.name}", callback_data="noop"),
             )
         else:
             kb_builder.row(
                 InlineKeyboardButton(
-                    text=source.name,
+                    text=book.name,
                     callback_data=TermCallback(
-                        term_id=term.id,
-                        source_id=source.id,
+                        term_id=term_id,
+                        book_id=book.id,
                         index=0,
                     ).pack(),
                 ),
@@ -238,8 +238,8 @@ def build_sources_kb(
                 InlineKeyboardButton(
                     text="◀ Предыдущее",
                     callback_data=TermCallback(
-                        term_id=term.id,
-                        source_id=current_source.id,
+                        term_id=term_id,
+                        book_id=book_id,
                         index=current_index - 1,
                     ).pack(),
                 ),
@@ -257,8 +257,8 @@ def build_sources_kb(
                 InlineKeyboardButton(
                     text="Следующее ▶",
                     callback_data=TermCallback(
-                        term_id=term.id,
-                        source_id=current_source.id,
+                        term_id=term_id,
+                        book_id=book_id,
                         index=current_index + 1,
                     ).pack(),
                 ),
