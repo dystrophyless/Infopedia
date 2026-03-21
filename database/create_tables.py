@@ -36,7 +36,7 @@ async def main():
             await conn.run_sync(Base.metadata.create_all)
 
         logger.debug(
-            "Таблицы `users`, `user_feedback`, `activity`, `terms`, `sources`, `definitions`,  `feature_usage` были успешно созданы",
+            "Таблицы `users`, `user_feedback`, `activity`, `books`, `chapters`, `topic_codes`, `topics`, `terms`, `definitions`,  `feature_usage` были успешно созданы",
         )
 
     except SQLAlchemyError as db_error:
