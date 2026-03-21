@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
-from database.models import Definition, Source, Term
+from database.models import Topic, Term, Definition
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,7 @@ class PrefixSearchStrategy(SearchStrategy):
             .where(Term.name.ilike(like_pattern))
             .limit(limit)
             .options(
-                selectinload(Term.sources)
-                .selectinload(Source.definitions)
+                selectinload(Term.definitions)
             )
         )
         result = await session.execute(query)
@@ -73,8 +72,7 @@ class SimilaritySearchStrategy(SearchStrategy):
             .order_by(func.similarity(Term.name, query).desc())
             .limit(limit)
             .options(
-                selectinload(Term.sources)
-                .selectinload(Source.definitions)
+                selectinload(Term.definitions)
             )
         )
         result = await session.execute(query)
@@ -119,9 +117,9 @@ async def get_definition_candidates(session, qvec_list, top_k: int):
         .order_by(Definition.embedding.cosine_distance(qvec_list))
         .limit(top_k)
         .options(
-            joinedload(Definition.topic),
-            selectinload(Definition.source)
-            .selectinload(Source.term)
+            joinedload(Definition.term),
+            joinedload(Definition.topic)
+            .joinedload(Topic.book)
         )
     )
     result = await session.execute(query)
