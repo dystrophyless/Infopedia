@@ -1,9 +1,8 @@
 import logging
 from html import escape
 
-from database.models import Definition, Source, Term
-from exceptions import NoSourcesFoundError
-from keyboards.inline_keyboards import build_sources_kb
+from database.models import Book, Term, Definition
+from keyboards.inline_keyboards import build_books_kb
 
 logger = logging.getLogger(__name__)
 
@@ -11,41 +10,16 @@ logger = logging.getLogger(__name__)
 async def get_term_info(
     *,
     term: Term,
-    source: Source = None,
+    book: Book = None,
     index: int = 0,
     i18n: dict,
 ):
-    if source is None:
-        sources: list[Source] = term.sources
+    books: list[Book] = get_term_books(term=term)
 
-        source: Source = sources[0]
+    if book is None:
+        book: Book = books[0]
 
-    definition, topic, page = await _get_term_details(source=source, index=index)
-
-    text = i18n.get("get_term_info").format(
-        term=term.name,
-        text=definition,
-        topic=topic,
-        page=page,
-    )
-    kb = build_sources_kb(term=term, current_source=source, current_index=index)
-
-    return text, kb
-
-
-async def _get_term_details(
-    *,
-    source: Source,
-    index: int = 0,
-) -> tuple[str, str, int] | None:
-    definitions: list[Definition] = source.definitions
-    term_name: str = source.term.name
-
-    if not definitions:
-        logging.debug(
-            f"У источника {source} не найдены дефиниции для термина {term_name}.",
-        )
-        raise NoSourcesFoundError
+    definitions: list[Definition] = get_term_definitions_in_specific_book(term=term, book=book)
 
     indexed_definition: Definition = definitions[index]
 
@@ -53,4 +27,40 @@ async def _get_term_details(
     topic: str = escape(indexed_definition.topic.name)
     page: int = indexed_definition.page
 
-    return definition, topic, page
+    text = i18n.get("get_term_info").format(
+        term=term.name,
+        text=definition,
+        topic=topic,
+        page=page,
+    )
+
+    kb = build_books_kb(books=books, book_id=book.id, term_id=term.id, definitions=definitions, current_index=index)
+
+    return text, kb
+
+
+def get_term_books(
+    *,
+    term: Term
+) -> list[Book]:
+    unique = {}
+
+    for definition in term.definitions:
+        book = definition.topic.book
+        unique[book.id] = book
+
+    return list(unique.values())
+
+
+def get_term_definitions_in_specific_book(
+    *,
+    term: Term,
+    book: Book,
+) -> list[Definition]:
+    definitions: list[Definition] = []
+
+    for definition in term.definitions:
+        if definition.topic.book_id == book.id:
+            definitions.append(definition)
+
+    return definitions
