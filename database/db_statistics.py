@@ -3,7 +3,7 @@ import logging
 from sqlalchemy import Float, Integer, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Activity, Definition, Source, Term, UserFeedback, Users
+from database.models import Activity, Definition, Term, UserFeedback, Users
 from schemas.feedback import FeedbackStat
 from schemas.user import UserStat
 
@@ -89,8 +89,7 @@ async def get_search_statistics_individually(
             ).label("accuracy"),
         )
         .join(UserFeedback, UserFeedback.definition_id == Definition.id)
-        .join(Source, Source.id == Definition.source_id)
-        .join(Term, Term.id == Source.term_id)
+        .join(Term, Term.id == Definition.term_id)
         .group_by(Definition.id, Term.name)
         .having(
             (
