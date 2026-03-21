@@ -3,14 +3,14 @@ import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Definition, Source, Term, Book, Chapter, Topic, TopicCode, TopicMapping
+from database.models import Book, Chapter, TopicCode, TopicMapping, Topic, Term, Definition
 
 
 async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
     with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
-    for term_name, sources in data.items():
+    for term_name, books in data.items():
         query = (
             select(Term)
             .where(Term.name == term_name)
@@ -24,26 +24,10 @@ async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
             session.add(term)
             await session.flush()
 
-        for source_name, defs in sources.items():
-            query = (
-                select(Source)
-                .where(
-                    Source.term_id == term.id,
-                    Source.name == source_name,
-                )
-            )
-            result = await session.execute(query)
-
-            source: Source = result.scalar_one_or_none()
-
-            if not source:
-                source: Source = Source(name=source_name, term=term)
-                session.add(source)
-                await session.flush()
-
+        for book_name, defs in books.items():
             query = (
                 select(Book)
-                .where(Book.name == source_name)
+                .where(Book.name == book_name)
             )
             result = await session.execute(query)
 
@@ -64,7 +48,7 @@ async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
                 query = (
                     select(Definition)
                     .where(
-                        Definition.source_id == source.id,
+                        Definition.term_id == term.id,
                         Definition.topic_id == topic.id,
                         Definition.text == d["definition"],
                         Definition.page == d["page"],
@@ -81,7 +65,7 @@ async def load_terms_from_json(session: AsyncSession, embedder, json_path: str):
                         text=d["definition"],
                         page=d["page"],
                         topic=topic,
-                        source=source,
+                        term=term,
                         embedding=emb,
                     )
                     session.add(definition)
