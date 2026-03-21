@@ -10,7 +10,7 @@ from database.db import (
     SearchContext,
     SimilaritySearchStrategy,
 )
-from database.models import Definition, Source, Term
+from database.models import Term, Definition
 from services.signature import generate_payload
 
 logger = logging.getLogger(__name__)
@@ -27,8 +27,7 @@ async def _get_ready_random_terms(
     random_terms: list[Term] = await get_random_terms(session, quantity=quantity)
 
     for term in random_terms:
-        first_source: Source = term.sources[0]
-        first_definition: Definition = first_source.definitions[0]
+        first_definition: Definition = term.definitions[0]
 
         message = generate_payload(
             {"action": "get_term_info", "user_id": user_id, "term": term.name},
@@ -97,8 +96,7 @@ async def search_definitions(
         found_terms = list(unique_terms.values())
 
     for term in found_terms:
-        first_source: Source = term.sources[0]
-        first_definition: Definition = first_source.definitions[0]
+        first_definition: Definition = term.definitions[0]
 
         message = generate_payload(
             {"action": "get_term_info", "user_id": user_id, "term": term.name},
