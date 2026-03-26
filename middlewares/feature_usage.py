@@ -18,7 +18,7 @@ class FeatureUsageMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        logger.debug("Входим в MenuHistoryMiddleware")
+        logger.debug("Входим в FeatureUsageMiddleware")
 
         log_feature_flag = get_flag(data, "log_feature")
 
@@ -32,6 +32,6 @@ class FeatureUsageMiddleware(BaseMiddleware):
 
             await log_feature_usage(session, user_id=user_id, feature=log_feature)
 
-        logger.debug("Выходим из MenuHistoryMiddleware")
+        logger.debug("Выходим из FeatureUsageMiddleware")
 
         return result
