@@ -57,6 +57,6 @@ class ActivityCounterMiddleware(BaseMiddleware):
 
         await add_user_activity(session, user_id=user.id)
 
-        logger.debug("Выходим из ShadowBanMiddleware")
+        logger.debug("Выходим из ActivityCounterMiddleware")
 
         return result
