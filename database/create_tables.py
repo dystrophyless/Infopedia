@@ -5,12 +5,9 @@ import sys
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from config_data.config import Config, load_config
-from database.connection import get_async_engine, init_vector_extension
+from database.connection import init_vector_extension
 from database.models import Base
 from logs.logging_settings import logging_config
-
-config: Config = load_config(".env")
 
 logger = logging.getLogger(__name__)
 logging.config.dictConfig(logging_config)
@@ -19,35 +16,26 @@ if sys.platform.startswith("win") or os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-async def main():
-    engine = None
+async def create_tables(engine) -> None:
     try:
-        engine = get_async_engine(
-            db_name=config.db.name,
-            host=config.db.host,
-            port=config.db.port,
-            user=config.db.user,
-            password=config.db.password,
-        )
-
         await init_vector_extension(engine)
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
         logger.debug(
-            "Таблицы `users`, `user_feedback`, `activity`, `books`, `chapters`, `topic_codes`, `topics`, `terms`, `definitions`,  `feature_usage` были успешно созданы",
+            "Таблицы `users`, `user_feedback`, `activity`, `books`, `chapters`, "
+            "`topic_codes`, `topics`, `terms`, `definitions`, `feature_usage` "
+            "были успешно созданы",
         )
 
     except SQLAlchemyError as db_error:
         logger.exception("Ошибка связанная с базой данных: %s", db_error)
-    except Exception as e:
-        logger.exception("Необработанная ошибка: %s", e)
+        raise
+    except Exception as error:
+        logger.exception("Необработанная ошибка: %s", error)
+        raise
     finally:
         if engine:
             await engine.dispose()
             logger.debug("Подключение к PostgreSQL было закрыто")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
