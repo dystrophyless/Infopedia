@@ -17,6 +17,7 @@ from database.connection import (
     get_sessionmaker,
     init_similarity_extension,
 )
+from database.create_tables import create_tables
 from database.db import get_total_terms, get_total_users
 from database.loader import load_terms_from_json, load_chapters_and_topic_codes, load_books_topics_and_mappings
 from handlers import (
@@ -82,6 +83,8 @@ async def main() -> None:
         password=config.db.password,
     )
 
+    await create_tables(engine)
+
     sessionmaker = get_sessionmaker(engine)
 
     async with sessionmaker() as session:
@@ -138,7 +141,10 @@ async def main() -> None:
     dp["locales"] = locales
 
     try:
+        logger.debug("Сбрасываем апдейты которые были получены когда бот был выключен")
         await bot.delete_webhook(drop_pending_updates=True)
+
+        logger.debug("Начинаем получать апдейты от Telegram")
         await dp.start_polling(bot)
     except Exception as e:
         logger.exception(e)
