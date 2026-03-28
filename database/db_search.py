@@ -63,13 +63,13 @@ class SimilaritySearchStrategy(SearchStrategy):
         self,
         session: AsyncSession,
         *,
-        query: str,
+        user_query: str,
         limit: int,
     ) -> list[Term] | None:
         query = (
             select(Term)
-            .where(Term.name.op("%")(query))
-            .order_by(func.similarity(Term.name, query).desc())
+            .where(Term.name.op("%")(user_query))
+            .order_by(func.similarity(Term.name, user_query).desc())
             .limit(limit)
             .options(
                 selectinload(Term.definitions)
@@ -80,7 +80,7 @@ class SimilaritySearchStrategy(SearchStrategy):
         terms = list(result.scalars().all())
 
         if not terms:
-            logger.debug("Не удалось получить термины похожие на `%s`", query)
+            logger.debug("Не удалось получить термины похожие на `%s`",  user_query)
             return None
 
         return terms
