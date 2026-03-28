@@ -1,4 +1,5 @@
 import logging
+from html import escape
 from contextlib import suppress
 
 from aiogram import Bot, F, Router, flags
@@ -22,6 +23,7 @@ from filters.filters import ActionPayloadFilter, FeatureAccessFilter, UserRoleFi
 from fsm.states import FSMSearch
 from keyboards.inline_keyboards import (
     build_considering_definition_kb,
+    build_suggestion_decision_kb,
     build_repeating_search_definition_kb,
     build_suggestion_kb,
 )
@@ -29,8 +31,8 @@ from keyboards.main_menu import build_back_kb, build_buy_subscription_kb, build_
 from keyboards.menu_commands import get_main_menu_commands
 from services.definition_service import DefinitionService
 from services.feedback_service import FeedbackService
-from services.notification_service import NotificationService
 from services.term_service import TermService
+from services.mention import get_user_link
 from ui.progressive_messages import ProgressiveMessage
 from utils.callback_factories import TermCallback
 
@@ -415,11 +417,13 @@ async def process_suggestion_positive_reply(
         ),
     )
 
-    await NotificationService.send_new_suggestion_alert(
-        bot=bot,
-        user=callback.from_user,
+    await bot.send_message(
+        text=(
+            f"📄 Было предложено добавить новый термин: <b>{escape(suggested_term)}</b>\n\n"
+            f"👤 От пользователя: {get_user_link(user_id=callback.from_user.id, username=callback.from_user.username, first_name=callback.from_user.first_name)}"
+        ),
         chat_id=group_id,
-        term=suggested_term,
+        reply_markup=build_suggestion_decision_kb(callback.from_user.id),
     )
 
     username: str = (
