@@ -185,7 +185,10 @@ def build_suggestion_decision_kb(user_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Принять", callback_data="add_new_term"),
+                InlineKeyboardButton(
+                    text="✅ Принять",
+                    callback_data="add_new_term",
+                ),
                 InlineKeyboardButton(
                     text="❌ Отклонить",
                     callback_data="deny_new_term",
