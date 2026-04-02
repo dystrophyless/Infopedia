@@ -15,11 +15,8 @@ from config_data.config import Config, load_config
 from database.connection import (
     get_async_engine,
     get_sessionmaker,
-    init_similarity_extension,
 )
-from database.create_tables import create_tables
 from database.db import get_total_terms, get_total_users
-from database.loader import load_terms_from_json, load_chapters_and_topic_codes, load_books_topics_and_mappings
 from handlers import (
     admin_handlers,
     inline_handlers,
@@ -40,8 +37,6 @@ from middlewares.registration import RegistrationMiddleware
 from middlewares.shadow_ban import ShadowBanMiddleware
 from middlewares.statistics import ActivityCounterMiddleware
 from middlewares.throttler import ThrottlingMiddleware
-from services.definition_service import DefinitionService
-from services.nlp import embedder, reranker
 from services.term_service import TermService
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, write_through=True)
@@ -83,23 +78,8 @@ async def main() -> None:
         password=config.db.password,
     )
 
-    await create_tables(engine)
-
     sessionmaker = get_sessionmaker(engine)
 
-    async with sessionmaker() as session:
-        await load_chapters_and_topic_codes(session, "database/mappingStructure.json")
-        logger.debug("Главы и коды тем успешно загружены в БД")
-
-        await load_books_topics_and_mappings(session, "database/newStructure.json")
-        logger.debug("Книги, темы и их связи успешно загружены в БД")
-
-        await load_terms_from_json(session, embedder, "database/terms.json")
-        logger.debug("Термины успешно загружены в БД")
-
-    await init_similarity_extension(engine)
-
-    definition_service: DefinitionService = DefinitionService(embedder, reranker)
     term_service: TermService = TermService()
 
     total_users_count: int = await get_total_users(sessionmaker)
@@ -133,7 +113,6 @@ async def main() -> None:
     dp["admin_ids"] = config.bot.admin_ids
     dp["group_id"] = config.bot.group_id
     dp["sessionmaker"] = sessionmaker
-    dp["definition_service"] = definition_service
     dp["term_service"] = term_service
     dp["total_users_count"] = total_users_count
     dp["total_terms_count"] = total_terms_count

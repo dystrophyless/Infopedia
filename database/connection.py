@@ -1,5 +1,6 @@
 import logging
 from urllib.parse import quote
+from functools import lru_cache
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -40,6 +41,7 @@ async def log_db_version(engine: AsyncEngine) -> None:
         logger.exception("Не удалось получить версию PostgreSQL: %s", e)
 
 
+@lru_cache(maxsize=1)
 def get_async_engine(
     db_name: str,
     host: str,
@@ -68,6 +70,31 @@ def get_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     )
 
 
+@lru_cache(maxsize=1)
+def get_sessionmaker_cached(
+    db_name: str,
+    host: str,
+    port: int,
+    user: str,
+    password: str,
+    echo: bool = False,
+    pool_size: int = 5,
+    max_overflow: int = 10,
+) -> async_sessionmaker[AsyncSession]:
+    return get_sessionmaker(
+        get_async_engine(
+            db_name=db_name,
+            host=host,
+            port=port,
+            user=user,
+            password=password,
+            echo=echo,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+        )
+    )
+
+
 async def init_similarity_extension(engine: AsyncEngine):
     try:
         async with engine.begin() as conn:
@@ -77,6 +104,8 @@ async def init_similarity_extension(engine: AsyncEngine):
                     "CREATE INDEX IF NOT EXISTS idx_terms_name_trgm ON terms USING gin (name gin_trgm_ops);",
                 ),
             )
+
+        logger.debug("Расширение для поиска по семантике успешно инициализировано")
     except Exception as e:
         logger.exception(
             "Не удалось инициализировать расширение для поиска по семантике: %s",
@@ -88,8 +117,10 @@ async def init_vector_extension(engine: AsyncEngine):
     try:
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+
+        logger.debug("Расширение для векторного поиска успешно инициализировано")
     except Exception as e:
         logger.exception(
-            "Не удалось инициализировать расширение для поиска по семантике: %s",
+            "Не удалось инициализировать расширение для векторного поиска: %s",
             e,
         )

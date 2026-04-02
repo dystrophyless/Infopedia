@@ -12,6 +12,7 @@ from aiogram.types import BotCommandScopeChat, CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Users
+from database.db import add_search_feedback
 from enums.features import Feature
 from enums.roles import UserRole
 from exceptions import (
@@ -29,12 +30,10 @@ from keyboards.inline_keyboards import (
 )
 from keyboards.main_menu import build_back_kb, build_buy_subscription_kb, build_menu_kb
 from keyboards.menu_commands import get_main_menu_commands
-from services.definition_service import DefinitionService
-from services.feedback_service import FeedbackService
 from services.term_service import TermService
 from services.mention import get_user_link
-from ui.progressive_messages import ProgressiveMessage
 from utils.callback_factories import TermCallback
+from celery_app.search_task import process_query
 
 logger = logging.getLogger(__name__)
 
@@ -164,8 +163,6 @@ async def process_appropriate_definition(
     i18n: dict,
     bot: Bot,
     state: FSMContext,
-    session: AsyncSession,
-    definition_service: DefinitionService,
 ):
     with suppress(TelegramBadRequest):
         msg_id = await state.get_value("await_definition_msg_id")
@@ -178,61 +175,9 @@ async def process_appropriate_definition(
 
     status_msg = await message.answer(i18n.get("awaiting_response"))
 
-    progress = ProgressiveMessage(
-        message=status_msg,
-        update_interval=0.8,
-        default_min_stage_time=0.0,
-    )
-    progress.set_stage_mapping(
-        {
-            "embedding": (i18n.get("step_understanding"), 1.8),
-            "searching": (i18n.get("step_searching"), 3.6),
-            "reranking": (i18n.get("step_clarifying"), 1.8),
-            "deciding": (i18n.get("step_preparing"), 1.8),
-        },
-    )
-    await progress.start()
+    process_query.delay(message.chat.id, status_msg.message_id, i18n, message.text)
 
-    async def on_stage(stage: str):
-        await progress.update_stage(stage)
-
-    definition, info = await definition_service.get_search_result(
-        session,
-        query=message.text,
-        on_stage=on_stage,
-    )
-
-    await progress.stop()
-
-    if definition is None:
-        await status_msg.edit_text(
-            text=i18n.get("definition_was_not_found"),
-            reply_markup=build_repeating_search_definition_kb(i18n),
-        )
-
-        await state.update_data(
-            consider_definition_msg_id=status_msg.message_id,
-            from_menu=None,
-        )
-        await state.set_state()
-
-        return
-
-    await status_msg.edit_text(
-        text=i18n.get("definition_representation").format(**info),
-    )
-
-    msg = await message.answer(
-        text=i18n.get("consider_definition"),
-        reply_markup=build_considering_definition_kb(i18n),
-    )
-
-    await state.update_data(
-        query=message.text,
-        definition_id=definition.id,
-        consider_definition_msg_id=msg.message_id,
-    )
-    await state.set_state(FSMSearch.await_considering_definition)
+    await state.update_data(query=message.text)
 
 
 @router.message(StateFilter(FSMSearch.await_definition_to_recognize))
@@ -270,6 +215,8 @@ async def process_definition_was_exact(
     state: FSMContext,
     session: AsyncSession,
 ):
+    query = await state.get_value("query")
+    definition_id = await state.get_value("definition_id")
     correct = callback.data == "definition_was_exact"
     text_key = (
         "exact_definition_feedback" if correct else "not_exact_definition_feedback"
@@ -282,12 +229,16 @@ async def process_definition_was_exact(
 
     await callback.answer()
 
-    await FeedbackService.add_feedback(
+    await add_search_feedback(
         session,
-        state=state,
         user_id=callback.from_user.id,
+        definition_id=definition_id,
+        query=query,
         correct=correct,
     )
+
+    await state.update_data(definition_id=None, query=None, from_menu=None)
+    await state.set_state()
 
 
 @router.message(StateFilter(FSMSearch.await_considering_definition))
