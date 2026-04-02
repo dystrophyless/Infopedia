@@ -1,7 +1,8 @@
 import logging
 
 from aiogram import Router
-from aiogram.filters import Command, CommandObject
+from aiogram.filters import Command, CommandObject, StateFilter
+from aiogram.fsm.state import default_state
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,12 +29,12 @@ router.message.filter(UserRoleFilter(UserRole.ADMIN))
 router.callback_query.filter(UserRoleFilter(UserRole.ADMIN))
 
 
-@router.message(Command(commands=["help"]))
+@router.message(Command(commands=["help"]), StateFilter(default_state))
 async def process_admin_help_command(message: Message, i18n: dict):
     await message.answer(text=i18n.get("/help_admin"))
 
 
-@router.message(Command(commands=["stats"]))
+@router.message(Command(commands=["stats"]), StateFilter(default_state))
 async def process_admin_statistics_command(
     message: Message,
     session: AsyncSession,
@@ -56,7 +57,7 @@ async def process_admin_statistics_command(
         await message.answer(text=i18n.get("stats_were_not_found"))
 
 
-@router.message(Command(commands=["feedback"]))
+@router.message(Command(commands=["feedback"]), StateFilter(default_state))
 async def process_admin_feedback_command(
     message: Message,
     session: AsyncSession,
@@ -80,7 +81,7 @@ async def process_admin_feedback_command(
         await message.answer(text=i18n.get("feedback_was_not_found"))
 
 
-@router.message(Command(commands=["ban"]))
+@router.message(Command(commands=["ban"]), StateFilter(default_state))
 async def process_admin_ban_command(
     message: Message,
     command: CommandObject,
@@ -130,7 +131,7 @@ async def process_admin_ban_command(
         await message.reply(text=i18n.get("successfully_banned"))
 
 
-@router.message(Command(commands=["unban"]))
+@router.message(Command(commands=["unban"]), StateFilter(default_state))
 async def process_admin_unban_command(
     message: Message,
     command: CommandObject,
