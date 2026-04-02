@@ -4,6 +4,7 @@ import os
 import sys
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from database.connection import init_vector_extension
 from database.models import Base
@@ -16,7 +17,7 @@ if sys.platform.startswith("win") or os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-async def create_tables(engine) -> None:
+async def create_tables(engine: AsyncEngine) -> None:
     try:
         await init_vector_extension(engine)
 
