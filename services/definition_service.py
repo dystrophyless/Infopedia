@@ -2,7 +2,6 @@ import asyncio
 import logging
 import math
 from html import escape
-from collections.abc import Callable
 
 import numpy as np
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,17 +36,8 @@ class DefinitionService:
         exact_fallback_threshold: float = 0.85,
         use_adaptive_alpha: bool = True,
         min_candidates_for_decision: int = 3,
-        on_stage: Callable | None = None,
     ) -> Definition | None:
-        async def stage(name: str):
-            if on_stage:
-                await on_stage(name)
-
-        # --- 1. Эмбеддинг ---
-        await stage("embedding")
-
         try:
-            # безопасный вызов encode в отдельном потоке
             def encode_sync(q):
                 return self.embedder.encode(
                     q,
@@ -65,10 +55,6 @@ class DefinitionService:
         if np.isnan(qvec).any():
             return None
 
-        await asyncio.sleep(0)  # даём шанс event loop переключиться
-
-        # --- 2. SQL поиск ---
-        await stage("searching")
         try:
             rows = await get_definition_candidates(session, qvec.tolist(), top_k=top_k)
         except Exception:
@@ -76,9 +62,7 @@ class DefinitionService:
             return None
         if not rows:
             return None
-        await asyncio.sleep(0)
 
-        # --- остальной код без изменений ---
         candidates, texts = [], []
         for definition, _ in rows:
             emb_raw = definition.embedding
@@ -94,8 +78,6 @@ class DefinitionService:
         if len(candidates) < min_candidates_for_decision:
             return None
 
-        # --- 3. Реранкинг ---
-        await stage("reranking")
         try:
             rerank_raw = await asyncio.to_thread(
                 self.reranker.predict,
@@ -105,7 +87,6 @@ class DefinitionService:
         except Exception:
             logger.exception("Ошибка реранкера")
             rerank_raw = np.zeros(len(candidates))
-        await asyncio.sleep(0)
 
         exact_norm = np.clip([c[1] for c in candidates], 0.0, 1.0)
         rerank_norm = np.array([_scaled_sigmoid(x) for x in rerank_raw])
@@ -182,10 +163,6 @@ class DefinitionService:
         second = unique_terms[1] if len(unique_terms) > 1 else None
         margin = best["combined"] - second["combined"] if second else 1.0
 
-        # --- 4. Финальная стадия ---
-        await stage("deciding")
-        await asyncio.sleep(0)
-
         logger.debug("Query: %r | Alpha: %.2f", query, adaptive_alpha)
         logger.debug("Top Candidates:")
         for idx, info in enumerate(unique_terms[:10], start=1):
@@ -229,16 +206,14 @@ class DefinitionService:
         session: AsyncSession,
         *,
         query: str,
-        on_stage: Callable | None = None,
-    ) -> tuple[Definition, dict] | tuple[None, None]:
+    ) -> dict | None:
         definition: Definition = await self.find_best(
             session,
             query=query,
-            on_stage=on_stage,
         )
 
         if not definition:
-            return None, None
+            return None
 
         info: dict = {
             "term": escape(definition.term.name),
@@ -246,6 +221,7 @@ class DefinitionService:
             "text": escape(definition.text),
             "topic": escape(definition.topic.name),
             "page": definition.page,
+            "definition_id": definition.id,
         }
 
-        return definition, info
+        return info

@@ -109,7 +109,8 @@ services:
     networks:
       - app_network
 
-  bot:
+  prepare_app:
+    profiles: ["bootstrap"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -121,6 +122,19 @@ services:
       TRANSFORMERS_CACHE: /home/app/.cache/huggingface/hub
     volumes:
       - hf_cache:/home/app/.cache/huggingface
+    command: [ "python", "-u", "-m", "scripts.prepare_app" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
     command: [ "python", "-u", "main.py" ]
     develop:
       watch:
@@ -175,7 +189,31 @@ services:
       TRANSFORMERS_CACHE: /home/app/.cache/huggingface/hub
     volumes:
       - hf_cache:/home/app/.cache/huggingface
-    command: [ "celery", "-A", "celery_app.app", "worker", "--pool=prefork", "--loglevel=INFO" ]
+    command: [ "celery", "-A", "celery_app.app", "worker", "--pool=prefork", "--concurrency=1", "--loglevel=DEBUG" ]
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: /app
+          ignore:
+            - .git/
+            - .venv/
+            - venv/
+            - __pycache__/
+            - .mypy_cache/
+            - .pytest_cache/
+            - .idea/
+            - .vscode/
+            - .postgres_data/
+
+        - action: rebuild
+          path: pyproject.toml
+
+        - action: rebuild
+          path: uv.lock
+
+        - action: rebuild
+          path: Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
