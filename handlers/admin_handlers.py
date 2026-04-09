@@ -140,8 +140,6 @@ async def process_admin_unban_command(
 ):
     args = command.args
 
-
-
     if not args:
         await message.reply(text=i18n.get("empty_ban_answer"))
         return
